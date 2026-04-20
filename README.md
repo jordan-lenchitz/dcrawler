@@ -1,10 +1,11 @@
 # dcrawl
 
-a basic dungeon crawler in gt.m compliant ansi mumps where the player position
-is `$X` and `$Y` and we have the decency to admit it.
+a basic dungeon crawler in gt.m compliant ansi MUMPS where the player position
+is `$X` and `$Y` and we have the decency to admit it
 
-a love letter to the cursor position intrinsics, via marshall alan hart and
-jordan lenchitz. $J gets a cameo in the status bar.
+a love letter to the cursor position intrinsics
+
+$J gets a cameo in the status bar.
 
 ## running
 
