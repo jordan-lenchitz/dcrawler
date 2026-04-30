@@ -81,16 +81,16 @@ add the new glyph to `data/dungeon.txt` and it just works.
 ## layout
 
 ```
-src/
+MUMPS/
+  DCENT.m     entity overlay, tick loop (subscript-filtered, safe to extend)
+  DCINV.m     inventory add / has / count / consume
+  DCMAP.m     map load, paint, passability, step effects, item/trap behaviors
+  DCPLAY.m    player state: hp, start position, alive check
   DCRAWL.m    entry point, main loop, status bar
   DCTERM.m    raw mode, cursor, escape sequences
   DCTYPE.m    type registry and lookup helpers
-  DCMAP.m     map load, paint, passability, step effects, item/trap behaviors
-  DCENT.m     entity overlay, tick loop (subscript-filtered, safe to extend)
-  DCPLAY.m    player state: hp, start position, alive check
-  DCINV.m     inventory add / has / count / consume
-data/
-  dungeon.txt the one fixed map: three rooms-worth of stuff split by a locked door
+txt/
+  dungeon.txt 'the one' (OG) fixed map: three rooms-worth of stuff split by a locked door
 Makefile      compile and run targets
 ```
 
