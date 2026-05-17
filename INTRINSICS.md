@@ -86,3 +86,11 @@ The `$P` abbreviation in MUMPS can refer to two distinct intrinsics, its meaning
     ```
 
 ### `$ZEOF` (End of File)
+*   **Purpose:** `$ZEOF` is a GT.M specific intrinsic special variable that indicates whether the end of a file has been reached during a read operation. It is `1` (true) if EOF, `0` (false) otherwise.
+*   **MUMPS/GT.M Notes:** This intrinsic is specific to GT.M (and YottaDB, its successor). Standard MUMPS implementations might use other mechanisms for EOF checking.
+*   **`dcrawl` Usage:** Used in `DCMAP.m` during the `LOAD` routine to read the `dungeon.txt` file line by line until the end is reached.
+    ```mumps
+    F  D  Q:$ZEOF
+     . R L:5
+     . I $ZEOF Q
+    ```
