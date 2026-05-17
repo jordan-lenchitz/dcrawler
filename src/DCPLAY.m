@@ -1,6 +1,7 @@
-DCPLAY ; player state: hp, position entry, death check
- ; note: player position is $X and $Y, not stored here.
- ; PX and PY are read out of $X and $Y at the top of every turn.
+DCPLAY ; player state
+ ; hp, position entry, death check
+ ; as always player position is $X and $Y = not stored here
+ ; PX and PY are read out of $X and $Y at the top of every turn
  QUIT
 INIT ; find @ in the loaded map, set hp, place player
  N SX,SY
