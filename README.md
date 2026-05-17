@@ -86,6 +86,6 @@ src/
   DCTYPE.m    type registry and lookup helpers
 txt/
   dungeon.txt 'the one' (OG) fixed map: three rooms-worth of stuff split by a locked door
-INTRINSICS.md document describing MUMPS intrinsics used or planned.
+INTRINSICS.md describes all the MUMPS intrinsics used in src/
 Makefile      compile and run targets
 ```
