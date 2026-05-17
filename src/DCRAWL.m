@@ -1,6 +1,10 @@
-DCRAWL ; dungeon crawler, entry point and main loop
- ; a love letter to $X and $Y. gt.m compliant, ansi mumps.
- ; the player IS the cursor. $X and $Y are the source of truth.
+DCRAWL ; dungeon crawler
+ ; entry point and main loop
+ ; a love letter to $X and $Y
+ ; ANSI MUMPS
+ ; tested on GT.M and YottaDB
+ ; the player IS the cursor
+ ; $X and $Y are the source of truth
  N CH,PX,PY,NX,NY,LASTTEST
  D INIT^DCTERM
  D CLEAR^DCTERM
