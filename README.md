@@ -18,6 +18,16 @@ if your routine resolution is set up globally already:
 cd src && mumps -run '^DCRAWL'
 ```
 
+### Dungeon Generation
+
+To generate new dungeon layouts, use the `generate_dungeons.py` script:
+
+```
+python3 generate_dungeons.py
+```
+
+This will create `dungeon_N.txt` files in the `txt/` directory. The `DCMAP.m` routine can be modified to load these new dungeons (e.g., randomly selecting one).
+
 ## controls
 
 `h j k l` or `w a s d` to move, `q` to quit. each keypress is one turn.
