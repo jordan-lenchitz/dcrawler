@@ -95,7 +95,8 @@ src/
   DCTERM.m    raw mode, cursor, escape sequences
   DCTYPE.m    type registry and lookup helpers
 txt/
-  dungeon.txt 'the one' (OG) fixed map: three rooms-worth of stuff split by a locked door
+  dungeon_1.txt     (Generated) currently active dungeon file
 INTRINSICS.md describes all the MUMPS intrinsics used in src/
 Makefile      compile and run targets
+generate_dungeons.py dungeon generation script
 ```
