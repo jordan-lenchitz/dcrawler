@@ -1,5 +1,5 @@
-DCTERM ; terminal handling, cursor control
- ; encapsulates the ansi escapes so everything else can just ask for X,Y
+DCTERM ; terminal handling and cursor control
+ ; encapsulates the ansi escapes so everything else can just ask for {,$}{X,Y}
  QUIT
 INIT ; raw mode on $PRINCIPAL
  U $P:(NOECHO:TERMINATOR="":WIDTH=80:LENGTH=24)
