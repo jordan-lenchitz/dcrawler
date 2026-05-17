@@ -1,4 +1,5 @@
-DCINV ; inventory. ^G("inv",glyph) = count.
+DCINV ; inventory
+ ; ^G("inv",glyph) = count
  QUIT
 ADD(GLYPH,QTY) ;
  S ^G("inv",GLYPH)=+$G(^G("inv",GLYPH))+QTY
