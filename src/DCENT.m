@@ -30,6 +30,23 @@ TICK(PX,PY) ; give every enemy a turn. currently static (no movement) in the bas
  . . S GL=^G("ent",Y,X)
  . . S K=$$KIND^DCTYPE(GL)
  . . I K'="enemy" Q
+ . . ; Random Movement for enemies
+ . . N DIR,ENX,ENY,OLDX,OLDY
+ . . S OLDX=X,OLDY=Y
+ . . S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
+ . . S ENX=X,ENY=Y
+ . . I DIR=0 S ENY=ENY-1 ; Up
+ . . I DIR=1 S ENY=ENY+1 ; Down
+ . . I DIR=2 S ENX=ENX-1 ; Left
+ . . I DIR=3 S ENX=ENX+1 ; Right
+ . . ; Check if new position is valid (passable, not player, not another enemy)
+ . . I $$PASS^DCMAP(ENX,ENY),'(ENX=PX&(ENY=PY)),'$D(^G("ent",ENY,ENX)) D
+ . . . ; Move enemy
+ . . . K ^G("ent",OLDY,OLDX)
+ . . . S ^G("ent",ENY,ENX)=GL
+ . . . D MOVECUR^DCTERM(OLDX,OLDY) W $$GLYPHAT^DCMAP(OLDX,OLDY) ; repaint old spot
+ . . . D MOVECUR^DCTERM(ENX,ENY) W GL ; paint new spot
+ . . . S X=ENX,Y=ENY ; update current X,Y for next iteration if moved
  . . S BEH=$$FIELD^DCTYPE(K,GL,3)
  . . I BEH'="" D @BEH(X,Y,PX,PY)
  QUIT

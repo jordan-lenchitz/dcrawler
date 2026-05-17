@@ -1,7 +1,7 @@
 DCRAWL ; dungeon crawler, entry point and main loop
  ; a love letter to $X and $Y. gt.m compliant, ansi mumps.
  ; the player IS the cursor. $X and $Y are the source of truth.
- N CH,PX,PY,NX,NY
+ N CH,PX,PY,NX,NY,LASTTEST
  D INIT^DCTERM
  D CLEAR^DCTERM
  D SEED^DCTYPE
@@ -20,8 +20,10 @@ MLOOP ;
  I CH=108!(CH=100) S NX=PX+1
  I CH=107!(CH=119) S NY=PY-1
  I CH=106!(CH=115) S NY=PY+1
+ I CH=105 D INSPECT G MLOOP ; 'i' for inspect
  I NX=PX,NY=PY G MLOOP
  I '$$PASS^DCMAP(NX,NY) D BUMP(NX,NY) G ENDTURN
+ S LASTTEST=$TEST ; Capture $TEST after the conditional
  ; valid move
  D REPAINT^DCMAP(PX,PY) ; repaint the cell the player is leaving
  D MOVECUR^DCTERM(NX,NY)
@@ -56,9 +58,8 @@ STATUS ; status bar on row 22
  W "inv "
  S I=""
  F  S I=$O(^G("inv",I)) Q:I=""  W I,"(",^G("inv",I),") "
- W " gold ",+$G(^G("score"))
- W "  pos ",SX,",",SY
- W "  $J ",$J
+ W "  gold ",+$G(^G("score"))
+ W "  pos ",SX,",",SY,"  $J ",$J,"  $IO ",$IO,"  $H ",$HOROLOG,"  $TEST ",LASTTEST
  D MOVECUR^DCTERM(SX,SY)
  QUIT
 WIN ;
@@ -76,3 +77,32 @@ DEATH ;
 QUIT ;
  D END^DCTERM
  QUIT
+INSPECT ; allow player to inspect map cells
+ N SX,SY,IX,IY,CH,GL,KIND,MSG
+ S SX=$X,SY=$Y ; save player cursor
+ S IX=SX,IY=SY ; inspection cursor starts at player
+INSLOOP ;
+ D MOVECUR^DCTERM(IX,IY)
+ R *CH
+ I CH=27 G INSQ ; Escape to quit
+ S NX=IX,NY=IY
+ I CH=104!(CH=97) S NX=IX-1 ; h or a
+ I CH=108!(CH=100) S NX=IX+1 ; l or d
+ I CH=107!(CH=119) S NY=IY-1 ; k or w
+ I CH=106!(CH=115) S NY=IY+1 ; j or s
+ ; Boundary checks
+ I NX<0 S NX=0
+ I NY<0 S NY=0
+ I NX>79 S NX=79 ; Assuming 80 width
+ I NY>21 S NY=21 ; Max row for map display
+ S IX=NX,IY=NY
+ S GL=$$GLYPHAT^DCMAP(IX,IY)
+ S KIND=$$KIND^DCTYPE(GL)
+ S MSG="X:"_IX_",Y:"_IY_", GL:"_GL_", KIND:"_KIND
+ D FLASH^DCTERM(MSG)
+ G INSLOOP
+INSQ ;
+ D MOVECUR^DCTERM(SX,SY)
+ D FLASH^DCTERM("") ; Clear flash message
+ QUIT
+
