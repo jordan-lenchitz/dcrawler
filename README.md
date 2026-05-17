@@ -81,7 +81,7 @@ add the new glyph to `data/dungeon.txt` and it just works.
 ## layout
 
 ```
-MUMPS/
+src/
   DCENT.m     entity overlay, tick loop (subscript-filtered, safe to extend)
   DCINV.m     inventory add / has / count / consume
   DCMAP.m     map load, paint, passability, step effects, item/trap behaviors
@@ -91,13 +91,6 @@ MUMPS/
   DCTYPE.m    type registry and lookup helpers
 txt/
   dungeon.txt 'the one' (OG) fixed map: three rooms-worth of stuff split by a locked door
+INTRINSICS.md document describing MUMPS intrinsics used or planned.
 Makefile      compile and run targets
 ```
-
-## future
-
-an `INTRINSICS.md` companion doc is planned. every intrinsic the game uses
-gets an entry: history, ansi x11.1 semantics, gt.m notes, why it earned its
-place here. `$X $Y $PRINCIPAL $IO $J $ZUT $TEST $KEY $RANDOM $HOROLOG` all
-show up in the code; the doc will explain why each one is here and not
-something boring like a local variable.
