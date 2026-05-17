@@ -87,16 +87,16 @@ add the new glyph to `data/dungeon.txt` and it just works.
 
 ```
 src/
-  DCENT.m     entity overlay, tick loop (subscript-filtered, safe to extend)
-  DCINV.m     inventory add / has / count / consume
-  DCMAP.m     map load, paint, passability, step effects, item/trap behaviors
-  DCPLAY.m    player state: hp, start position, alive check
-  DCRAWL.m    entry point, main loop, status bar
-  DCTERM.m    raw mode, cursor, escape sequences
-  DCTYPE.m    type registry and lookup helpers
+  DCENT.m                 entity overlay, tick loop (subscript-filtered, safe to extend)
+  DCINV.m                 inventory add / has / count / consume
+  DCMAP.m                 map load, paint, passability, step effects, item/trap behaviors
+  DCPLAY.m                player state: hp, start position, alive check
+  DCRAWL.m                entry point, main loop, status bar
+  DCTERM.m                raw mode, cursor, escape sequences
+  DCTYPE.m                type registry and lookup helpers
 txt/
-  dungeon_1.txt     (Generated) currently active dungeon file
-INTRINSICS.md describes all the MUMPS intrinsics used in src/
-Makefile      compile and run targets
-generate_dungeons.py dungeon generation script
+  dungeon*.txt            dungeon files
+INTRINSICS.md             describes all the MUMPS intrinsics used in src/
+Makefile                  compile and run targets
+generate_dungeons.py      dungeon generation script
 ```
