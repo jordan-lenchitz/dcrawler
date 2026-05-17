@@ -40,66 +40,49 @@ The `$P` abbreviation in MUMPS can refer to two distinct intrinsics, its meaning
     W "  $J ",$J
     ```
 
-### `$ZEOF` (End of File)
-*   **Purpose:** `$ZEOF` is a GT.M specific intrinsic special variable that indicates whether the end of a file has been reached during a read operation. It is `1` (true) if EOF, `0` (false) otherwise.
-*   **MUMPS/GT.M Notes:** This intrinsic is specific to GT.M (and YottaDB, its successor). Standard MUMPS implementations might use other mechanisms for EOF checking.
-*   **`dcrawl` Usage:** Used in `DCMAP.m` during the `LOAD` routine to read the `dungeon.txt` file line by line until the end is reached.
-    ```mumps
-    F  D  Q:$ZEOF
-     . R L:5
-     . I $ZEOF Q
-    ```
-
-### `$D` (Ambiguous: `$DATA` Function and `$DEVICE` Special Variable)
-The `$D` abbreviation in MUMPS can refer to two distinct intrinsics, its meaning is entirely context-dependent.
-
-#### `$DATA` (Function)
-*   **Purpose:** `$DATA(variable)` is an intrinsic function that returns an integer indicating whether a `variable` exists and if it has descendants.
-    *   `0`: Variable does not exist.
-    *   `1`: Variable exists, has no descendants.
-    *   `10`: Variable does not exist, but has descendants.
-    *   `11`: Variable exists and has descendants.
-*   **MUMPS/GT.M Notes:** Essential for checking the existence and structure of variables (local or global arrays).
-*   **`dcrawl` Usage:** Primarily used to check for the existence of global arrays like `^G("ent",Y,X)` (entities) or `^G("inv",I)` (inventory items), and to check if player start coordinates `SX`, `SY` were found.
-    ```mumps
-    I '$D(^G("ent",Y,X)) Q 0  ; Check if an entity exists at X,Y
-    I '$D(SX) W "no @ in dungeon.txt" Q ; Check if starting position was found
-    ```
-
-#### `$DEVICE` (Special Variable)
-*   **Purpose:** `$DEVICE` is an intrinsic special variable that indicates the status of the current device. It can contain device-specific information, often related to errors or conditions.
-*   **MUMPS/GT.M Notes:** Its content is highly device-dependent.
-*   **`dcrawl` Usage:** This intrinsic was *not found* to be directly used in the `dcrawl` codebase. Its inclusion here is based on its common abbreviation `$D`.
-
-### `$ZUT` (GT.M Terminal Utility)
-*   **Purpose:** `$ZUT` is a GT.M specific intrinsic special variable, a general-purpose terminal utility intrinsic. Its behavior depends on the value assigned to it or the arguments passed. It can be used for various terminal control functions.
-*   **MUMPS/GT.M Notes:** This is a GT.M extension, not part of standard MUMPS. It's often used for non-standard terminal interactions.
-*   **`dcrawl` Usage:** Used in `DCRAWL.m` within the `WIN` and `DEATH` routines, likely to pause execution or clear input buffers before exiting.
-    ```mumps
-    W "you reached the stairs. press any key. $ZUT=",$ZUT
-    R *CH:30
-    ```
-
-## Planned Intrinsics (Mentioned in README, Not Currently in Code)
-
-The `README.md` mentions the planning of an `INTRINSICS.md` companion document that would include the following intrinsics, but they are not currently found in the MUMPS source code files of this project. Their potential future use would likely involve:
-
 ### `$IO` (Input/Output Device)
 *   **Purpose:** Intrinsic special variable identifying the current I/O device.
-*   **Potential `dcrawl` Usage:** Could be used for more complex device handling, logging, or alternative input/output streams.
+*   **MUMPS/GT.M Notes:** Can be used for logging or complex device handling.
+*   **`dcrawl` Usage:** Displayed in the status bar in `DCRAWL.m` for informational purposes.
+    ```mumps
+    W "  $IO ",$IO
+    ```
 
 ### `$TEST` (Result of Last Conditional Command)
 *   **Purpose:** Intrinsic special variable indicating the success or failure of the last `IF`, `FOR`, or `XECUTE` command. `1` (true) if successful, `0` (false) otherwise.
-*   **Potential `dcrawl` Usage:** Could be used for more robust error checking or conditional logic based on command outcomes.
+*   **MUMPS/GT.M Notes:** Useful for robust error checking or conditional logic.
+*   **`dcrawl` Usage:** Captured after a conditional check in `MLOOP` and displayed in the status bar in `DCRAWL.m`.
+    ```mumps
+    S LASTTEST=$TEST ; Capture $TEST after the conditional
+    ; ...
+    W "  $TEST ",LASTTEST
+    ```
 
 ### `$KEY` (Keyboard Input)
-*   **Purpose:** Intrinsic special variable that returns the last character typed from the keyboard (when in character-by-character input mode).
-*   **Potential `dcrawl` Usage:** Could replace or augment the `R *CH` command for more fine-grained keyboard input handling, potentially allowing for more complex control schemes.
+*   **Purpose:** Intrinsic special variable that returns the last character typed from the keyboard (when in character-by-character input mode). It is cleared after being read.
+*   **MUMPS/GT.M Notes:** Essential for responsive, character-by-character input handling without needing to press enter.
+*   **`dcrawl` Usage:** Used in the new `INSPECT` routine to read single key presses for movement within inspection mode. Also, `R *CH` implicitly uses `$KEY` to get raw character input.
+    ```mumps
+    INSLOOP ;
+     D MOVECUR^DCTERM(IX,IY)
+     R *CH ; Reads a single character, often internally using $KEY
+     I CH=27 G INSQ ; Escape to quit
+    ```
 
 ### `$RANDOM` (Random Number Generator)
 *   **Purpose:** Intrinsic function `$RANDOM(N)` returns a pseudo-random integer between 0 and `N-1`.
-*   **Potential `dcrawl` Usage:** Essential for introducing randomness, such as random enemy movement, dungeon generation, or item drops.
+*   **MUMPS/GT.M Notes:** Useful for introducing randomness into gameplay.
+*   **`dcrawl` Usage:** Used in `DCENT.m` within the `TICK` routine to generate random directions for enemy movement.
+    ```mumps
+    S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
+    ```
 
 ### `$HOROLOG` (Date and Time)
 *   **Purpose:** Intrinsic special variable returning the current date and time in a specific format (e.g., `date,time` where `date` is days since Dec 31, 1840, and `time` is seconds since midnight).
-*   **Potential `dcrawl` Usage:** Could be used for in-game clocks, timestamps for logs, or to implement time-based events.
+*   **MUMPS/GT.M Notes:** Useful for in-game clocks or timestamps.
+*   **`dcrawl` Usage:** Displayed in the status bar in `DCRAWL.m` for informational purposes.
+    ```mumps
+    W "  $H ",$HOROLOG
+    ```
+
+### `$ZEOF` (End of File)
