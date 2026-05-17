@@ -1,5 +1,6 @@
-DCENT ; entity (enemy) management. entities live in ^G("ent",Y,X)=glyph.
- ; extracted from the initial map at startup so movement has a clean overlay.
+DCENT ; entity (enemy) management
+ ; entities live in ^G("ent",Y,X)=glyph
+ ; extracted from the initial map at startup so movement has a clean overlay
  QUIT
 DRAWENT ; pass over ^G("map"), pull enemies into ^G("ent"), repaint those cells as floor
  N R,C,ROW,GL,MAX,K
