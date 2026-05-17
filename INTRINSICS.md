@@ -1,6 +1,6 @@
 # INTRINSICS.md
 
-This document details the MUMPS intrinsic special variables and functions used or planned for use in the `dcrawl` dungeon crawler. It aims to clarify their purpose, standard behavior, and specific usage within this project, especially in the context of GT.M / YottaDB.
+This document details the MUMPS intrinsic special variables and functions used in `dcrawl` MUMPS code by clarifying their purpose, standard behavior, and specific usage within this project (especially in the context of GT.M).
 
 ## Used Intrinsics
 
