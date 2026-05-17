@@ -5,7 +5,7 @@ from collections import deque
 DUNGEON_ROWS = 20
 DUNGEON_COLS = 60
 OUTPUT_DIR = "txt"
-NUM_DUNGEONS = 1 # Only generate one dungeon for now
+NUM_DUNGEONS = 1 # TODO: change to however many you want and/or need to generate
 
 GLYPHS = {
     "player_start": '@',
