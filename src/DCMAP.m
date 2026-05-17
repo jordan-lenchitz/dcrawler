@@ -1,4 +1,6 @@
-DCMAP ; map state. ^G("map",row) holds row strings. single source of truth for terrain.
+DCMAP ; map state
+ ; ^G("map",row) holds row strings
+ ; single source of truth for terrain
  QUIT
 LOAD ; read data/dungeon.txt row by row into ^G("map")
  N F,R,L
