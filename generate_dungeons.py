@@ -215,6 +215,12 @@ def generate_dungeon():
             r, c = random.choice(final_available_spots)
             grid[r][c] = GLYPHS["potion"]
             final_available_spots.remove((r,c))
+
+    for _ in range(random.randint(2, 4)): # Meat
+        if final_available_spots:
+            r, c = random.choice(final_available_spots)
+            grid[r][c] = GLYPHS["meat"]
+            final_available_spots.remove((r,c))
             
     for _ in range(random.randint(5, 10)): # Gold
         if final_available_spots:

@@ -16,6 +16,9 @@ compile: $(ROUTINES)
 run: compile
 	@mumps -run '^DCRAWL'
 
+generate:
+	python3 generate_dungeons.py
+
 clean:
 	rm -f src/*.o
 
