@@ -1,8 +1,6 @@
 .PHONY: run compile clean
 
-# assumes $gtm_dist and gtmroutines are set 
-# by sourcing gtmprofile first
-
+# assumes $gtm_dist and gtmroutines are set by sourcing gtmprofile first
 # point gtmroutines at the src/ dir so routine resolution finds what it needs
 
 ROUTINES := $(wildcard src/*.m)
