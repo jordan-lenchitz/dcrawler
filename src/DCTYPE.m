@@ -25,7 +25,8 @@ SEED ;
  S ^TYPE("trap","~")="poison tile^1^TRAPPO"
  ; items, value = heal or score amount
  S ^TYPE("item","!")="potion^5^ITEMPO"
- S ^TYPE("item","(")="key^0^ITEMKE"
+ S ^TYPE("item","M")="meat^10^ITEMPO"
+ S ^TYPE("item","(")= "key^0^ITEMKE"
  S ^TYPE("item","$")="gold^10^ITEMGO"
  ; exit
  S ^TYPE("exit",">")="stairs^0^EXITST"
