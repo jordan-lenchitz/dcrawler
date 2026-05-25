@@ -1,4 +1,5 @@
-DCTYPE ; type registry - v1.1.0
+DCTYPE ; type registry 
+ ; v1.1.0
  ; one place to declare what glyphs mean
  ; ^TYPE(kind,glyph) = label^value^behavior
  ;   kind     one of: wall void floor door enemy trap item exit
