@@ -5,7 +5,7 @@ from collections import deque
 DUNGEON_ROWS = 20
 DUNGEON_COLS = 60
 OUTPUT_DIR = "txt"
-NUM_DUNGEONS = 5 # default to 5 dungeons for more variety
+NUM_DUNGEONS = 5 # default for more variety
 
 GLYPHS = {
     "player_start": '@',
