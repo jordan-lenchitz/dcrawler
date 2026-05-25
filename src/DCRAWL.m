@@ -1,4 +1,4 @@
-DCRAWL ; dungeon crawler
+DCRAWL ; dungeon crawler - v1.1.0
  ; entry point and main loop
  ; a love letter to $X and $Y
  ; ANSI MUMPS
