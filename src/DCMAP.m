@@ -79,7 +79,19 @@ ITEMPO(X,Y) ; potion, heal 5
  QUIT
 ITEMME(X,Y) ; meat, heal 10
  D HEAL^DCPLAY(10)
- D FLASH^DCTERM("you eat some meat. +10 hp.")
+ D FLASH^DCTERM("you eat some vegan meat. +10 hp.")
+ QUIT
+ITEMAP(X,Y) ; apple, heal 3
+ D HEAL^DCPLAY(3)
+ D FLASH^DCTERM("you eat an apple. +3 hp.")
+ QUIT
+ITEMBR(X,Y) ; bread, heal 7
+ D HEAL^DCPLAY(7)
+ D FLASH^DCTERM("you eat some bread. +7 hp.")
+ QUIT
+ITEMTO(X,Y) ; tofu, heal 15
+ D HEAL^DCPLAY(15)
+ D FLASH^DCTERM("you eat some tofu. +15 hp.")
  QUIT
 ITEMKE(X,Y) ; key
  D ADD^DCINV("(",1)
