@@ -37,22 +37,22 @@ This will create `dungeon_N.txt` files in the `txt/` directory. The `DCMAP.m` ro
 | glyph | meaning                                      |
 |-------|----------------------------------------------|
 | `@`   | you                                          |
-| `#`   | stone wall, impassable                       |
-| `.`   | void, impassable (the stuff outside rooms)   |
-| ` `   | floor, walk on it (silent, per marshall)     |
-| `+`   | closed door, needs a key                     |
+| `#`   | impassable stone wall                        |
+| `.`   | impassable void                              |
+| ` `   | floor to walk on silently per marshall       |
+| `+`   | closed door needs a key                      |
 | `/`   | open door                                    |
-| `g r b` | goblin, rat, bat. enemies. damage on bump  |
-| `^`   | spike trap. one-shot, disarms after trigger  |
-| `~`   | poison tile. damage every step               |
-| `!`   | potion. +5 hp                                |
+| `g r b` | goblin rat bat = damage on bump            |
+| `^`   | spike trap one-shot disarmed after trigger   |
+| `~`   | poison tile = damage every step              |
+| `!`   | potion = +5 hp                               |
 | `M`   | 'meat' [vegan] +10 hp                        |
-| `A`   | apple. +3 hp                                 |
-| `B`   | bread. +7 hp                                 |
-| `T`   | tofu. +15 hp                                 |
+| `A`   | apple = +3 hp                                |
+| `B`   | bread = +7 hp                                |
+| `T`   | tofu = +15 hp                                |
 | `(`   | key                                          |
-| `$`   | gold. +10 score                              |
-| `>`   | stairs. reach them and you win.              |
+| `$`   | gold = +10 score                             |
+| `>`   | stairs = reach to win                        |
 
 there is no combat. you dodge.
 
