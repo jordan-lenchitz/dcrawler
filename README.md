@@ -46,7 +46,7 @@ This will create `dungeon_N.txt` files in the `txt/` directory. The `DCMAP.m` ro
 | `^`   | spike trap. one-shot, disarms after trigger  |
 | `~`   | poison tile. damage every step               |
 | `!`   | potion. +5 hp                                |
-| `M`   | meat. +10 hp                                 |
+| `M`   | 'meat' [vegan] +10 hp                        |
 | `(`   | key                                          |
 | `$`   | gold. +10 score                              |
 | `>`   | stairs. reach them and you win.              |
