@@ -31,17 +31,32 @@ TICK(PX,PY) ; give every enemy a turn. currently static (no movement) in the bas
  . . S GL=^G("ent",Y,X)
  . . S K=$$KIND^DCTYPE(GL)
  . . I K'="enemy" Q
- . . ; Random Movement for enemies
- . . N DIR,ENX,ENY,OLDX,OLDY
+ . . ; Smarter AI: move towards player if within 5 units, else random
+ . . N DX,DY,DIST,ENX,ENY,OLDX,OLDY
  . . S OLDX=X,OLDY=Y
- . . S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
- . . S ENX=X,ENY=Y
- . . I DIR=0 S ENY=ENY-1 ; Up
- . . I DIR=1 S ENY=ENY+1 ; Down
- . . I DIR=2 S ENX=ENX-1 ; Left
- . . I DIR=3 S ENX=ENX+1 ; Right
+ . . S DX=PX-X,DY=PY-Y
+ . . S DIST=$ZSQR(DX*DX+DY*DY)
+ . . I DIST<5 D
+ . . . S ENX=X,ENY=Y
+ . . . I DX>0 S ENX=X+1
+ . . . E  I DX<0 S ENX=X-1
+ . . . I DY>0 S ENY=Y+1
+ . . . E  I DY<0 S ENY=Y-1
+ . . E  D
+ . . . N DIR
+ . . . S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
+ . . . S ENX=X,ENY=Y
+ . . . I DIR=0 S ENY=ENY-1 ; Up
+ . . . I DIR=1 S ENY=ENY+1 ; Down
+ . . . I DIR=2 S ENX=ENX-1 ; Left
+ . . . I DIR=3 S ENX=ENX+1 ; Right
  . . ; Check if new position is valid (passable, not player, not another enemy)
  . . I $$PASS^DCMAP(ENX,ENY),'(ENX=PX&(ENY=PY)),'$D(^G("ent",ENY,ENX)) D
+ . . . ; If adjacent to player, attack
+ . . . I $$DIST(ENX,ENY,PX,PY)'>1 D
+ . . . . D DAMAGE^DCPLAY(1) ; Simple 1 damage attack
+ . . . . D FLASH^DCTERM("enemy attacks you for 1 damage.")
+ . . . . Q
  . . . ; Move enemy
  . . . K ^G("ent",OLDY,OLDX)
  . . . S ^G("ent",ENY,ENX)=GL
@@ -51,3 +66,7 @@ TICK(PX,PY) ; give every enemy a turn. currently static (no movement) in the bas
  . . S BEH=$$FIELD^DCTYPE(K,GL,3)
  . . I BEH'="" D @BEH(X,Y,PX,PY)
  QUIT
+DIST(X1,Y1,X2,Y2) ; Distance formula
+ N DX,DY
+ S DX=X1-X2,DY=Y1-Y2
+ Q $ZSQR(DX*DX+DY*DY)

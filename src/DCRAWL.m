@@ -54,16 +54,20 @@ BUMP(X,Y) ; player tried to step into X,Y but it's blocked. enemy? take damage.
  D FLASH^DCTERM($$FIELD^DCTYPE(K,GL,1)_" hits you for "_V_".")
  QUIT
 STATUS ; status bar on row 22
- N SX,SY,I
+ N SX,SY,I,HP,HPMAX
  S SX=$X,SY=$Y
  D MOVECUR^DCTERM(0,22)
  W $C(27)_"[2K"
- W "hp ",$$HP^DCPLAY,"/",$$HPMAX^DCPLAY,"  "
+ S HP=$$HP^DCPLAY,HPMAX=$$HPMAX^DCPLAY
+ W "hp "
+ I HP<5 W $C(27)_"[1;31m"
+ E  W $C(27)_"[1;32m"
+ W HP,"/",HPMAX,$C(27)_"[0m  "
  W "inv "
  S I=""
  F  S I=$O(^G("inv",I)) Q:I=""  W I,"(",^G("inv",I),") "
  W "  gold ",+$G(^G("score"))
- W "  pos ",SX,",",SY,"  $J ",$J,"  $IO ",$IO,"  $H ",$HOROLOG,"  $TEST ",LASTTEST
+ W "  pos ",SX,",",SY
  D MOVECUR^DCTERM(SX,SY)
  QUIT
 WIN ;
