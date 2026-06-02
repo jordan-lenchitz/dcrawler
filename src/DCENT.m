@@ -31,7 +31,7 @@ TICK(PX,PY) ; give every enemy a turn. currently static (no movement) in the bas
  . . S GL=^G("ent",Y,X)
  . . S K=$$KIND^DCTYPE(GL)
  . . I K'="enemy" Q
- . . ; Smarter AI: move towards player if within 5 units, else random
+ . . ; Smarter logic: move towards player if within 5 units, else random
  . . N DX,DY,DIST,ENX,ENY,OLDX,OLDY
  . . S OLDX=X,OLDY=Y
  . . S DX=PX-X,DY=PY-Y
