@@ -1,17 +1,22 @@
 # dcrawl
 
-a dungeon crawler written in ANSI MUMPS where the player position is `$X` and `$Y` and we have the decency to admit it /// a love letter to the cursor position intrinsics /// `$J` and `$H` live in the status bar and `^SCORES` remembers every run.
+a dungeon crawler written in ANSI MUMPS where the player position is `$X` and `$Y` and we have the decency to admit it
+
+a love letter to the cursor position intrinsics 
+
+`$J` and `$H` live in the status bar and `^SCORES` remembers every run.
 
 ## running
 
-requires a MUMPS runtime. i recommend [yottadb](https://yottadb.com/product/get-started/) or [gt.m](https://sourceforge.net/projects/fis-gtm/). source your environment first, then:
-
+requires a MUMPS runtime. i recommend [yottadb](https://yottadb.com/product/get-started/) or [gt.m](https://sourceforge.net/projects/fis-gtm/). source your environment first:
 ```
 source /usr/local/etc/ydb_env_set   # or gtmprofile
-make run-local
 ```
 
-from the project root, so the dungeon files load with a relative path.
+then, from the project root, so the dungeon files load with a relative path:
+```
+make run-local
+```
 
 if your routine resolution is set up globally already:
 
