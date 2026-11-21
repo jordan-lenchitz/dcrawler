@@ -1,8 +1,8 @@
-DCTERM ; terminal handling - v2.0.0
+DCTERM ; terminal handling - v2.2.0
  ; encapsulates the ansi escapes so everything else can just ask for {,$}{X,Y}
  QUIT
-INIT ; raw mode on $PRINCIPAL (NOWRAP must follow WIDTH so YottaDB never injects \r\n into ANSI escapes)
- U $P:(NOECHO:NOESCAPE:WIDTH=512:NOWRAP:LENGTH=40:TERMINATOR="")
+INIT ; raw mode on $PRINCIPAL (NOWRAP after WIDTH; HUPENABLE+EXCEPTION route disconnect to TRAP^DCRAWL)
+ U $P:(NOECHO:NOESCAPE:WIDTH=512:NOWRAP:LENGTH=40:TERMINATOR="":HUPENABLE:EXCEPTION="D TRAP^DCRAWL")
  W $C(27)_"[?25l"      ; hide the cursor, we draw @ ourselves
  QUIT
 END ; restore terminal for the human's return to sanity
@@ -27,7 +27,7 @@ PUTCH(X,Y,GL,COL) ; draw single glyph at X,Y with optional ANSI color, keeping $
  S $X=X+1,$Y=Y
  QUIT
 CLRFLASH ; clear transient message buffer and row 20
- K ^G("msg")
+ K ^G($J,"msg")
  N SX,SY
  S SX=$X,SY=$Y
  D MOVECUR(0,20)
@@ -37,19 +37,34 @@ CLRFLASH ; clear transient message buffer and row 20
 FLASH(MSG) ; one-line transient message on row 20 (appends within a turn if non-empty)
  N SX,SY,CUR,OUT
  S SX=$X,SY=$Y
- I MSG="" K ^G("msg") S OUT=""
+ I MSG="" K ^G($J,"msg") S OUT=""
  E  D
- . S CUR=$G(^G("msg"))
+ . S CUR=$G(^G($J,"msg"))
  . S OUT=$S(CUR="":MSG,1:$E(CUR_" | "_MSG,1,79))
- . S ^G("msg")=OUT
+ . S ^G($J,"msg")=OUT
  D MOVECUR(0,20)
  W $C(27)_"[2K"
  W OUT
  D MOVECUR(SX,SY)
  QUIT
+IDLESEC() ; session idle timeout in seconds from DCRAWL_IDLE_SEC (0 = disabled)
+ N V
+ S V=+$ZTRNLNM("DCRAWL_IDLE_SEC")
+ Q $S(V>0:V,1:0)
+READCH(WAITSEC) ; read single raw byte; uses WAITSEC or DCRAWL_IDLE_SEC. -1=EOF, -2=timeout
+ N CH,TO
+ S TO=+$G(WAITSEC)
+ I TO'>0 S TO=$$IDLESEC()
+ I TO>0 R *CH:TO E  Q -2
+ E  R *CH
+ I $ZEOF!(CH<0) Q -1
+ Q CH
 READKEY() ; read a single key or ANSI arrow escape sequence, return canonical action token
- N CH,C2,C3,ACT
- R *CH
+ N CH,C2,C3,ACT,TO
+ S TO=$$IDLESEC()
+ I TO>0 R *CH:TO E  Q "TIMEOUT"
+ E  R *CH
+ I $ZEOF!(CH<0) Q "QUIT"
  I CH=27 D  Q ACT
  . S ACT="ESC"
  . R *C2:0.08
@@ -72,5 +87,5 @@ READKEY() ; read a single key or ANSI arrow escape sequence, return canonical ac
  I CH=105 Q "INSPECT"
  I CH=116!(CH=72) Q "SCORES"
  I CH=122!(CH=63) Q "HELP"
- I CH=113 Q "QUIT"
+ I CH=113!(CH=81) Q "QUIT"
  Q ""

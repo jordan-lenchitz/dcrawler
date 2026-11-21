@@ -1,5 +1,5 @@
-DCMAP ; map state - v2.0.0
- ; ^G("map",row) holds row strings
+DCMAP ; map state - v2.2.0
+ ; ^G($J,"map",row) holds row strings per MUMPS job
  ; single source of truth for terrain
  QUIT
 MAXFLOOR() ; count sequential txt/dungeon_N.txt files (1..99), default 1
@@ -8,7 +8,7 @@ MAXFLOOR() ; count sequential txt/dungeon_N.txt files (1..99), default 1
  S N=0
  F  S F="txt/dungeon_"_(N+1)_".txt" Q:$ZSEARCH(F)=""  S N=N+1 Q:N'<99
  Q $S(N>0:N,1:1)
-LOAD(FLOOR) ; read txt/dungeon_<FLOOR>.txt (fallback txt/dungeon.txt) into ^G("map")
+LOAD(FLOOR) ; read txt/dungeon_<FLOOR>.txt (fallback txt/dungeon.txt) into ^G($J,"map")
  N F,R,L,Z
  S Z=$ZSEARCH("")
  S F=""
@@ -17,23 +17,23 @@ LOAD(FLOOR) ; read txt/dungeon_<FLOOR>.txt (fallback txt/dungeon.txt) into ^G("m
  . S CAND="txt/dungeon_"_FLOOR_".txt"
  . I $ZSEARCH(CAND)'="" S F=CAND
  I F="" S F="txt/dungeon.txt"
- K ^G("map")
+ K ^G($J,"map")
  O F:(READONLY):5 E  W "cannot open "_F Q
  U F
  S R=0
  F  D  Q:$ZEOF
  . R L:5
  . I $ZEOF Q
- . S ^G("map",R)=L
+ . S ^G($J,"map",R)=L
  . S R=R+1
  C F
  U $P
  QUIT
 PAINT ; draw the entire map with ANSI colors from ^TYPE
  N R,C,MAX,ROW,GL,COL,CURCOL
- S MAX=$O(^G("map",""),-1)
+ S MAX=$O(^G($J,"map",""),-1)
  F R=0:1:MAX D
- . S ROW=$G(^G("map",R))
+ . S ROW=$G(^G($J,"map",R))
  . D MOVECUR^DCTERM(0,R)
  . S CURCOL=""
  . F C=1:1:$L(ROW) D
@@ -47,19 +47,19 @@ PAINT ; draw the entire map with ANSI colors from ^TYPE
  . I CURCOL'="" W $C(27)_"[0m"
  . S $X=$L(ROW),$Y=R
  QUIT
-GLYPHAT(X,Y) ; glyph at X,Y from ^G("map"). empty string if out of range.
- Q $E($G(^G("map",Y)),X+1)
+GLYPHAT(X,Y) ; glyph at X,Y from ^G($J,"map"). empty string if out of range.
+ Q $E($G(^G($J,"map",Y)),X+1)
 SETCELL(X,Y,G) ; patch a single cell in the map string
  N ROW
- S ROW=$G(^G("map",Y))
+ S ROW=$G(^G($J,"map",Y))
  I $L(ROW)<(X+1) Q
  S $E(ROW,X+1)=G
- S ^G("map",Y)=ROW
+ S ^G($J,"map",Y)=ROW
  QUIT
 PASS(X,Y) ; 1 if player can enter X,Y, 0 otherwise
  N G,K
  ; enemies block movement; bumping attacks them
- I $D(^G("ent",Y,X)) Q 0
+ I $D(^G($J,"ent",Y,X)) Q 0
  S G=$$GLYPHAT(X,Y)
  I G="" Q 0
  S K=$$KIND^DCTYPE(G)
@@ -68,7 +68,7 @@ PASS(X,Y) ; 1 if player can enter X,Y, 0 otherwise
  Q 1
 EPASS(X,Y) ; 1 if enemy can enter X,Y, 0 otherwise
  N G,K
- I $D(^G("ent",Y,X)) Q 0
+ I $D(^G($J,"ent",Y,X)) Q 0
  S G=$$GLYPHAT(X,Y)
  I G="" Q 0
  S K=$$KIND^DCTYPE(G)
@@ -133,7 +133,7 @@ ITEMKE(X,Y) ; key
  D FLASH^DCTERM("you pick up a key.")
  QUIT
 ITEMGO(X,Y) ; gold
- S ^G("score")=+$G(^G("score"))+10
+ S ^G($J,"score")=+$G(^G($J,"score"))+10
  D FLASH^DCTERM("you pick up gold. +10.")
  QUIT
 ITEMDG(X,Y) ; dagger (+1 atk)
@@ -145,5 +145,5 @@ ITEMSW(X,Y) ; sword (+2 atk)
  D FLASH^DCTERM("you equip a sword! (+2 atk, now "_$$ATK^DCPLAY_")")
  QUIT
 EXITST(X,Y) ; stairs trigger floor descent or win in DCRAWL
- S ^G("descend")=1
+ S ^G($J,"descend")=1
  QUIT

@@ -24,6 +24,23 @@ if your routine resolution is set up globally already:
 cd src && mumps -run '^DCRAWL'
 ```
 
+### docker (one-command local play or browser server)
+
+play locally in your terminal in one command (no local MUMPS setup needed):
+```
+docker run -it --rm ghcr.io/jordan-lenchitz/dcrawler
+```
+
+or run the browser-playable `ttyd` server locally on port 8080:
+```
+docker run --rm -p 8080:8080 ghcr.io/jordan-lenchitz/dcrawler
+```
+
+to deploy the browser-playable server to Google Cloud Run (scale-to-zero, single shared `^SCORES` instance while warm):
+```
+./scripts/deploy-cloudrun.sh
+```
+
 ## controls
 
 | key | action |
@@ -79,13 +96,15 @@ below the 20x60 dungeon map, the terminal shows:
 - a live intrinsics line with `$H` (`$HOROLOG`) and `$J` (current MUMPS job / process id)
 - a colorized two-line glyph legend and key hint bar
 
-completed runs (win or death) are persisted in the MUMPS global `^SCORES`:
+completed runs (win or death) are persisted in the shared MUMPS global `^SCORES`:
 
 - `^SCORES("seq")` holds the monotonic run id via `$INCREMENT`
-- `^SCORES("run",id)` stores `score^floor^result^cause^$H^$ZUT^$J`
+- `^SCORES("run",id)` stores `score^floor^result^cause^$H^$ZUT^$J^name` (with optional 3-letter arcade initials entered on the title screen, defaulting to `---`)
 - `^SCORES("idx",-score,id)` is an inverted-score collation index so `$ORDER` walks top scores highest-first natively
 
-the top 8 runs appear automatically on win or death (highlighting the run you just finished), and can be viewed mid-run with `t` (or `H`).
+the title screen highlights the current `#1` high score holder from `^SCORES`. the top 8 runs appear automatically on win or death (highlighting the run you just finished, with a play-again loop), and can be viewed anytime with `t` (or `H`).
+
+live per-session game state is isolated under `^G($J,...)` so concurrent players on the same MUMPS database never collide, while sharing one live `^SCORES` leaderboard. `QUIT` and `$ETRAP` (with `HUPENABLE`) clean up `^G($J)` automatically on normal exit or abrupt disconnect.
 
 ## dungeon generation
 
@@ -111,17 +130,17 @@ source /usr/local/etc/ydb_env_set   # or gtmprofile
 make test
 ```
 
-compiles all MUMPS routines and runs two suites against isolated temporary YottaDB databases (so tests never touch your real `^SCORES`):
+compiles all MUMPS routines and runs two suites against isolated temporary MUMPS databases (so tests never touch your real `^SCORES`):
 
-- **`tests/DCTEST.m`** (native MUMPS test suite): verifies strict invariants & BFS reachability across all 25 on-disk `txt/dungeon_1..25.txt` files plus 50 stress-generated `DCGEN` floors and live `GENMAP^DCGEN`, `DCTYPE` lookups, `MAXFLOOR`/`LOAD^DCMAP`, goblin chasing, 4-hit unarmed kill, weapon stacking, 1-shot kill, combat death cause, wounded rat fleeing, bat terrain preservation, `EPASS` closed-door blocking even with a key, spike disarming, poison persistence, all vegan foods & potion healing with HP cap, multi-key inventory consumption, stairs descent trigger, and `^SCORES` descending collation ranking.
-- **`tests/test_pty_smoke.py`** (minimal 30x80 ANSI PTY smoke test): verifies real terminal boot (`flr 1/25`, `$X`/`$Y`, `$H`/`$J`, ANSI colors), all 4 movement input schemes (CSI arrows, SS3 arrows, `wasd`, `hjkl`), wall collisions, `esc` handling, `inspect` mode cursor/exit keys, `z` help screen, `t` scores overlay, and multi-floor win.
+- `tests/DCTEST.m` (native MUMPS test suite): verifies strict invariants & BFS reachability across all 25 on-disk `txt/dungeon_1..25.txt` files plus 50 stress-generated `DCGEN` floors and live `GENMAP^DCGEN`, `DCTYPE` lookups & idempotent `SEED`, `MAXFLOOR`/`LOAD^DCMAP`, goblin chasing, 4-hit unarmed kill, weapon stacking, 1-shot kill, combat death cause, wounded rat fleeing, bat terrain preservation, `EPASS` closed-door blocking even with a key, spike disarming, poison persistence, all vegan foods & potion healing with HP cap, multi-key inventory consumption, stairs descent trigger, `^G($J)` multi-job isolation, and `^SCORES` initials + descending collation ranking.
+- `tests/test_pty_smoke.py` (30x80 ANSI PTY smoke test): verifies title screen & 3-letter arcade initials prompt, real terminal boot (`flr 1/25`, `$X`/`$Y`, `$H`/`$J`, ANSI colors), all 4 movement input schemes (CSI arrows, SS3 arrows, `wasd`, `hjkl`), wall collisions, `esc` handling, `inspect` mode cursor/exit keys, `z` help screen, `t` scores overlay, multi-floor win & play-again loop, concurrent two-player isolation on a shared MUMPS database, `$ETRAP` cleanup on abrupt PTY hangup, and `DCRAWL_IDLE_SEC` inactivity timeout.
 
 ## design notes
 
-- `$X` and `$Y` are the ground truth for the player's location. they are not mirrored anywhere. the main loop reads them into locals (`PX`, `PY`) at the top of each turn, computes the move, and restores the cursor invariant at the bottom so the next iteration finds them pointing at the player again.
-- `DCTERM` opens `$PRINCIPAL` with `NOECHO:NOESCAPE:WIDTH=512:NOWRAP` (`NOWRAP` after `WIDTH`, since `WIDTH` re-enables wrap) and draws colored glyphs via `PUTCH` which explicitly restores logical `$X` and `$Y` after ANSI escape bytes.
-- terrain is a single source of truth: `^G("map",row)` holds the row strings. changing a cell is a `$E` replacement, repainted in color via `REPAINT^DCMAP`.
-- enemies live in an overlay `^G("ent",y,x)=glyph^hp` so they can move and take damage without corrupting items or traps underneath. `TICK^DCENT` snapshots entity coordinates before iterating so moving enemies never corrupt `$ORDER`.
+- `$X` and `$Y` are the ground truth for your location. they are not mirrored anywhere. the main loop reads them into locals (`PX`, `PY`) at the top of each turn, computes the move, and restores the cursor invariant at the bottom so the next iteration finds them pointing at you again.
+- `DCTERM` opens `$PRINCIPAL` with `NOECHO:NOESCAPE:WIDTH=512:NOWRAP:HUPENABLE` (`NOWRAP` after `WIDTH`, since `WIDTH` re-enables wrap; `HUPENABLE` routes terminal hangup to `$ETRAP`) and draws colored glyphs via `PUTCH` which explicitly restores logical `$X` and `$Y` after ANSI escape bytes.
+- terrain is a single source of truth: `^G($J,"map",row)` holds the row strings per MUMPS job. changing a cell is a `$E` replacement, repainted in color via `REPAINT^DCMAP`.
+- enemies live in a per-job overlay `^G($J,"ent",y,x)=glyph^hp` so they can move and take damage without corrupting items or traps underneath. `TICK^DCENT` snapshots entity coordinates before iterating so moving enemies never corrupt `$ORDER`.
 - arithmetic expressions like `((DX*DX)+(DY*DY))**0.5` are explicitly parenthesized to respect MUMPS strict left-to-right operator precedence.
 
 ## extensibility
@@ -147,17 +166,26 @@ src/
   DCGEN.m                 native MUMPS procedural room-and-corridor dungeon generator
   DCINV.m                 inventory add / has / count / consume
   DCMAP.m                 multi-floor map load, color paint, passability, item/trap behaviors
-  DCPLAY.m                player state: hp, atk, damage cause, start placement, alive check
-  DCRAWL.m                entry point, main loop, bump-to-attack, hud, inspect, help
-  DCSCORE.m               persistent ^SCORES leaderboard in MUMPS globals
-  DCTERM.m                raw mode, NOWRAP, color PUTCH, ANSI arrow-key READKEY
-  DCTYPE.m                type registry (label^value^behavior^color^hp) and lookup helpers
+  DCPLAY.m                player state: hp, atk, arcade initials, cause, start placement
+  DCRAWL.m                entry point, main loop, bump-to-attack, hud, inspect, help, $ETRAP
+  DCSCORE.m               shared ^SCORES leaderboard in MUMPS globals
+  DCTERM.m                raw mode, NOWRAP, HUPENABLE, color PUTCH, ANSI READKEY, idle timeout
+  DCTITLE.m               30x80 ANSI title screen, #1 leader display & 3-letter initials prompt
+  DCTYPE.m                concurrency-safe type registry (label^value^behavior^color^hp)
+scripts/
+  docker-entrypoint.sh    container entrypoint (auto-selects ttyd web server or local CLI)
+  run-session.sh          per-connection session launcher with shared DB & SIGHUP cleanup
+  deploy-cloudrun.sh      one-command Google Cloud Run deployment helper
+.github/workflows/
+  docker-publish.yml      multi-arch GHCR image publishing workflow
 txt/
   dungeon_1..25.txt       25 generated room-and-corridor floors
   dungeon.txt             fallback classic dungeon
 tests/
-  DCTEST.m                native MUMPS unit, combat, ^SCORES & dungeon invariant test suite
-  test_pty_smoke.py       minimal 30x80 ANSI PTY & key-handling smoke test
+  DCTEST.m                native MUMPS unit, combat, isolation, ^SCORES & invariant test suite
+  test_pty_smoke.py       30x80 ANSI PTY, title screen, concurrency & timeout smoke test
+Dockerfile                container image (MUMPS runtime + ttyd + precompiled src/*.o)
+.dockerignore             excludes tests, git metadata, and local artifacts from image builds
 INTRINSICS.md             describes the MUMPS intrinsics used in src/
 Makefile                  compile, run-local, generate, test, clean targets
 ```

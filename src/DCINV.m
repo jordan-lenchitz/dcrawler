@@ -1,14 +1,14 @@
-DCINV ; inventory management - v1.1.0
- ; ^G("inv",glyph) = count
+DCINV ; inventory management - v2.2.0
+ ; ^G($J,"inv",glyph) = count
  QUIT
 ADD(GLYPH,QTY) ;
- S ^G("inv",GLYPH)=+$G(^G("inv",GLYPH))+QTY
+ S ^G($J,"inv",GLYPH)=+$G(^G($J,"inv",GLYPH))+QTY
  QUIT
-HAS(GLYPH) Q +$G(^G("inv",GLYPH))>0
-COUNT(GLYPH) Q +$G(^G("inv",GLYPH))
+HAS(GLYPH) Q +$G(^G($J,"inv",GLYPH))>0
+COUNT(GLYPH) Q +$G(^G($J,"inv",GLYPH))
 CONSUME(GLYPH) ;
  N N
- S N=+$G(^G("inv",GLYPH))
- I N>1 S ^G("inv",GLYPH)=N-1 Q
- K ^G("inv",GLYPH)
+ S N=+$G(^G($J,"inv",GLYPH))
+ I N>1 S ^G($J,"inv",GLYPH)=N-1 Q
+ K ^G($J,"inv",GLYPH)
  QUIT

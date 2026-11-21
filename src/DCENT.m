@@ -1,33 +1,33 @@
-DCENT ; entity (enemy) management & npc strategy - v2.0.0
- ; entities live in ^G("ent",Y,X) = glyph^hp
+DCENT ; entity (enemy) management & npc strategy - v2.2.0
+ ; entities live in ^G($J,"ent",Y,X) = glyph^hp
  ; extracted from the initial map at startup so movement has a clean overlay
  QUIT
 ENTGL(Y,X) ; enemy glyph at Y,X
- Q $P($G(^G("ent",Y,X)),"^",1)
+ Q $P($G(^G($J,"ent",Y,X)),"^",1)
 ENTHP(Y,X) ; enemy current HP at Y,X
- Q +$P($G(^G("ent",Y,X)),"^",2)
-DRAWENT ; pass over ^G("map"), pull enemies into ^G("ent"), paint them in color
+ Q +$P($G(^G($J,"ent",Y,X)),"^",2)
+DRAWENT ; pass over ^G($J,"map"), pull enemies into ^G($J,"ent"), paint them in color
  N R,C,ROW,GL,MAX,K
- K ^G("ent")
- S MAX=$O(^G("map",""),-1)
+ K ^G($J,"ent")
+ S MAX=$O(^G($J,"map",""),-1)
  F R=0:1:MAX D
- . S ROW=$G(^G("map",R))
+ . S ROW=$G(^G($J,"map",R))
  . F C=0:1:$L(ROW)-1 D
  . . S GL=$E(ROW,C+1)
  . . S K=$$KIND^DCTYPE(GL)
  . . I K'="enemy" Q
- . . S ^G("ent",R,C)=GL_"^"_$$HP^DCTYPE(GL)
+ . . S ^G($J,"ent",R,C)=GL_"^"_$$HP^DCTYPE(GL)
  . . S $E(ROW,C+1)=" "
- . . S ^G("map",R)=ROW
+ . . S ^G($J,"map",R)=ROW
  . . D PUTCH^DCTERM(C,R,GL,$$COLOR^DCTYPE(GL))
  QUIT
 REDRAW ; repaint all live enemies after a full screen redraw (e.g. closing leaderboard)
  N Y,X,GL
  S Y=""
- F  S Y=$O(^G("ent",Y)) Q:Y=""  D
+ F  S Y=$O(^G($J,"ent",Y)) Q:Y=""  D
  . I Y'?1.N Q
  . S X=""
- . F  S X=$O(^G("ent",Y,X)) Q:X=""  D
+ . F  S X=$O(^G($J,"ent",Y,X)) Q:X=""  D
  . . I X'?1.N Q
  . . S GL=$$ENTGL(Y,X)
  . . D PUTCH^DCTERM(X,Y,GL,$$COLOR^DCTYPE(GL))
@@ -39,27 +39,27 @@ HIT(X,Y,DMG) ; player attacks enemy at X,Y for DMG. returns 1 if slain, 0 if ali
  S NM=$$FIELD^DCTYPE("enemy",GL,1)
  S HP=$$ENTHP(Y,X)-DMG
  I HP'>0 D  Q 1
- . K ^G("ent",Y,X)
+ . K ^G($J,"ent",Y,X)
  . D REPAINT^DCMAP(X,Y)
  . S PTS=$S(GL="g":10,1:5)
- . S ^G("score")=+$G(^G("score"))+PTS
+ . S ^G($J,"score")=+$G(^G($J,"score"))+PTS
  . D FLASH^DCTERM("you slay the "_NM_"! (+"_PTS_" gold)")
- S ^G("ent",Y,X)=GL_"^"_HP
+ S ^G($J,"ent",Y,X)=GL_"^"_HP
  D FLASH^DCTERM("you hit "_NM_" for "_DMG_" ("_HP_" hp left).")
  Q 0
 TICK(PX,PY) ; give every live enemy a turn via its ^TYPE behavior label
  ; snapshot positions first so moving entities never corrupts $O iteration
  N Y,X,GL,K,BEH,LIST,CNT,IDX
  S CNT=0,Y=""
- F  S Y=$O(^G("ent",Y)) Q:Y=""  D
+ F  S Y=$O(^G($J,"ent",Y)) Q:Y=""  D
  . I Y'?1.N Q
  . S X=""
- . F  S X=$O(^G("ent",Y,X)) Q:X=""  D
+ . F  S X=$O(^G($J,"ent",Y,X)) Q:X=""  D
  . . I X'?1.N Q
  . . S CNT=CNT+1,LIST(CNT)=Y_"^"_X
  F IDX=1:1:CNT D
  . S Y=$P(LIST(IDX),"^",1),X=$P(LIST(IDX),"^",2)
- . I '$D(^G("ent",Y,X)) Q
+ . I '$D(^G($J,"ent",Y,X)) Q
  . S GL=$$ENTGL(Y,X)
  . S K=$$KIND^DCTYPE(GL)
  . I K'="enemy" Q
@@ -99,11 +99,11 @@ ATTACK(X,Y,GL) ; enemy attacks adjacent player
  QUIT
 MOVE(X,Y,ENX,ENY) ; move entity from X,Y to ENX,ENY preserving glyph and HP
  N REC,GL
- S REC=$G(^G("ent",Y,X))
+ S REC=$G(^G($J,"ent",Y,X))
  I REC="" Q
  S GL=$P(REC,"^",1)
- K ^G("ent",Y,X)
- S ^G("ent",ENY,ENX)=REC
+ K ^G($J,"ent",Y,X)
+ S ^G($J,"ent",ENY,ENX)=REC
  D REPAINT^DCMAP(X,Y)
  D PUTCH^DCTERM(ENX,ENY,GL,$$COLOR^DCTYPE(GL))
  QUIT
@@ -132,7 +132,7 @@ RANDSTEP(X,Y,PX,PY,ENX,ENY) ; try a random cardinal step. 1 if valid.
  Q 0
 CANMOVE(X,Y,PX,PY) ; 1 if enemy can move to X,Y
  I X=PX,Y=PY Q 0
- I $D(^G("ent",Y,X)) Q 0
+ I $D(^G($J,"ent",Y,X)) Q 0
  Q $$EPASS^DCMAP(X,Y)
 DIST(X1,Y1,X2,Y2) ; Euclidean distance (parenthesized for MUMPS left-to-right precedence)
  N DX,DY

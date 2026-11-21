@@ -1,4 +1,4 @@
-DCTYPE ; type registry - v2.0.0
+DCTYPE ; type registry - v2.2.0
  ; one place to declare what glyphs mean
  ; ^TYPE(kind,glyph) = label^value^behavior^color^hp
  ;   kind     one of: wall void floor door enemy trap item exit
@@ -9,7 +9,11 @@ DCTYPE ; type registry - v2.0.0
  ;   hp       enemy max HP (enemies only)
  ; adding a new enemy, trap, item, or door: one SET.
  QUIT
-SEED ;
+SEED ; concurrency-safe idempotent seed (never wipes ^TYPE while other jobs read)
+ I $G(^TYPEVER)="2.2.0",$D(^TYPE("exit",">")) QUIT
+ L +^TYPEVER:5
+ I $G(^TYPEVER)="2.2.0",$D(^TYPE("exit",">")) L -^TYPEVER QUIT
+ TSTART ():SERIAL
  K ^TYPE
  ; terrain
  S ^TYPE("wall","#")="stone wall^0^^90"
@@ -37,6 +41,9 @@ SEED ;
  S ^TYPE("item","}")="sword^2^ITEMSW^1;37"
  ; exit
  S ^TYPE("exit",">")="stairs^0^EXITST^1;37"
+ S ^TYPEVER="2.2.0"
+ TCOMMIT
+ L -^TYPEVER
  QUIT
 KIND(GLYPH) ; reverse lookup, returns kind for a glyph, "" if unknown
  N K

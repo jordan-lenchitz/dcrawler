@@ -3,7 +3,7 @@ DCGEN ; procedural room-and-corridor dungeon generator - v2.1.0
  ; CLI:      mumps -run '^DCGEN'  (env: DCGEN_FLOORS, DCGEN_OUT)
  ; library:  D GENALL^DCGEN(25,"txt")
  ;           S OK=$$GENFLOOR^DCGEN(FLOOR,.ROWS)
- ;           S OK=$$GENMAP^DCGEN(FLOOR)   ; live procedural load into ^G("map")
+ ;           S OK=$$GENMAP^DCGEN(FLOOR)   ; live procedural load into ^G($J,"map")
  N FLOORS,OUTDIR
  S FLOORS=+$ZTRNLNM("DCGEN_FLOORS")
  I FLOORS'>0 S FLOORS=25
@@ -24,12 +24,12 @@ GENALL(FLOORS,OUTDIR) ; generate FLOORS sequential dungeon files into OUTDIR
  W "Generated ",FLOORS," dungeon(s) in ",OUTDIR,!
  QUIT
  ;
-GENMAP(FLOOR) ; generate a floor directly into ^G("map",0..19) for live procedural play
+GENMAP(FLOOR) ; generate a floor directly into ^G($J,"map",0..19) for live procedural play
  N ROWS,R,OK
  S OK=$$GENFLOOR(FLOOR,.ROWS)
  I 'OK Q 0
- K ^G("map")
- F R=0:1:19 S ^G("map",R)=ROWS(R)
+ K ^G($J,"map")
+ F R=0:1:19 S ^G($J,"map",R)=ROWS(R)
  Q 1
  ;
 GENFLOOR(FLOOR,ROWS) ; retry up to 200 times to build a valid floor into ROWS(0..19)

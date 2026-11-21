@@ -1,0 +1,11 @@
+.git
+.github
+tests
+src/*.o
+tests/*.o
+*.log
+*.dat
+*.gld
+*.mjo
+.DS_Store
+__pycache__
