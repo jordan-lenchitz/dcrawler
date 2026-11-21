@@ -1,8 +1,12 @@
-DCENT ; entity (enemy) management - v1.1.0
- ; entities live in ^G("ent",Y,X)=glyph
+DCENT ; entity (enemy) management & npc strategy - v2.0.0
+ ; entities live in ^G("ent",Y,X) = glyph^hp
  ; extracted from the initial map at startup so movement has a clean overlay
  QUIT
-DRAWENT ; pass over ^G("map"), pull enemies into ^G("ent"), repaint those cells as floor
+ENTGL(Y,X) ; enemy glyph at Y,X
+ Q $P($G(^G("ent",Y,X)),"^",1)
+ENTHP(Y,X) ; enemy current HP at Y,X
+ Q +$P($G(^G("ent",Y,X)),"^",2)
+DRAWENT ; pass over ^G("map"), pull enemies into ^G("ent"), paint them in color
  N R,C,ROW,GL,MAX,K
  K ^G("ent")
  S MAX=$O(^G("map",""),-1)
@@ -12,15 +16,39 @@ DRAWENT ; pass over ^G("map"), pull enemies into ^G("ent"), repaint those cells 
  . . S GL=$E(ROW,C+1)
  . . S K=$$KIND^DCTYPE(GL)
  . . I K'="enemy" Q
- . . S ^G("ent",R,C)=GL
+ . . S ^G("ent",R,C)=GL_"^"_$$HP^DCTYPE(GL)
  . . S $E(ROW,C+1)=" "
  . . S ^G("map",R)=ROW
- . . D MOVECUR^DCTERM(C,R)
- . . W GL
+ . . D PUTCH^DCTERM(C,R,GL,$$COLOR^DCTYPE(GL))
  QUIT
-TICK(PX,PY) ; give every enemy a turn
+REDRAW ; repaint all live enemies after a full screen redraw (e.g. closing leaderboard)
+ N Y,X,GL
+ S Y=""
+ F  S Y=$O(^G("ent",Y)) Q:Y=""  D
+ . I Y'?1.N Q
+ . S X=""
+ . F  S X=$O(^G("ent",Y,X)) Q:X=""  D
+ . . I X'?1.N Q
+ . . S GL=$$ENTGL(Y,X)
+ . . D PUTCH^DCTERM(X,Y,GL,$$COLOR^DCTYPE(GL))
+ QUIT
+HIT(X,Y,DMG) ; player attacks enemy at X,Y for DMG. returns 1 if slain, 0 if alive.
+ N GL,HP,NM,PTS
+ S GL=$$ENTGL(Y,X)
+ I GL="" Q 0
+ S NM=$$FIELD^DCTYPE("enemy",GL,1)
+ S HP=$$ENTHP(Y,X)-DMG
+ I HP'>0 D  Q 1
+ . K ^G("ent",Y,X)
+ . D REPAINT^DCMAP(X,Y)
+ . S PTS=$S(GL="g":10,1:5)
+ . S ^G("score")=+$G(^G("score"))+PTS
+ . D FLASH^DCTERM("you slay the "_NM_"! (+"_PTS_" gold)")
+ S ^G("ent",Y,X)=GL_"^"_HP
+ D FLASH^DCTERM("you hit "_NM_" for "_DMG_" ("_HP_" hp left).")
+ Q 0
+TICK(PX,PY) ; give every live enemy a turn via its ^TYPE behavior label
  ; snapshot positions first so moving entities never corrupts $O iteration
- ; the filter below (Y?1.N) keeps us safe against any non-numeric subscripts
  N Y,X,GL,K,BEH,LIST,CNT,IDX
  S CNT=0,Y=""
  F  S Y=$O(^G("ent",Y)) Q:Y=""  D
@@ -32,51 +60,76 @@ TICK(PX,PY) ; give every enemy a turn
  F IDX=1:1:CNT D
  . S Y=$P(LIST(IDX),"^",1),X=$P(LIST(IDX),"^",2)
  . I '$D(^G("ent",Y,X)) Q
- . S GL=^G("ent",Y,X)
+ . S GL=$$ENTGL(Y,X)
  . S K=$$KIND^DCTYPE(GL)
  . I K'="enemy" Q
- . ; If already cardinally adjacent to player, attack using ^TYPE damage
- . I $$DIST(X,Y,PX,PY)'>1 D  Q
- . . N DMG,NM
- . . S DMG=+$$FIELD^DCTYPE(K,GL,2)
- . . S NM=$$FIELD^DCTYPE(K,GL,1)
- . . D DAMAGE^DCPLAY(DMG)
- . . D FLASH^DCTERM(NM_" attacks you for "_DMG_".")
- . ; Smarter logic: move towards player if within 5 units, else random
- . N DX,DY,ADX,ADY,DIST,ENX,ENY,MOVED
- . S DX=PX-X,DY=PY-Y
- . S ADX=$S(DX<0:-DX,1:DX),ADY=$S(DY<0:-DY,1:DY)
- . S DIST=$$DIST(X,Y,PX,PY)
- . S ENX=X,ENY=Y,MOVED=0
- . I DIST<5 D
- . . ; Try primary axis toward player first, fall back to secondary axis
- . . N TX,TY
- . . I ADX'<ADY D
- . . . S TX=X+$S(DX>0:1,DX<0:-1,1:0),TY=Y
- . . . I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1 Q
- . . . I DY'=0 S TX=X,TY=Y+$S(DY>0:1,1:-1) I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1
- . . E  D
- . . . S TX=X,TY=Y+$S(DY>0:1,DY<0:-1,1:0)
- . . . I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1 Q
- . . . I DX'=0 S TX=X+$S(DX>0:1,1:-1),TY=Y I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1
- . E  D
- . . N DIR,TX,TY
- . . S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
- . . S TX=X,TY=Y
- . . I DIR=0 S TY=TY-1 ; Up
- . . I DIR=1 S TY=TY+1 ; Down
- . . I DIR=2 S TX=TX-1 ; Left
- . . I DIR=3 S TX=TX+1 ; Right
- . . I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1
- . I MOVED D
- . . K ^G("ent",Y,X)
- . . S ^G("ent",ENY,ENX)=GL
- . . D MOVECUR^DCTERM(X,Y) W $$GLYPHAT^DCMAP(X,Y) ; repaint old spot
- . . D MOVECUR^DCTERM(ENX,ENY) W GL ; paint new spot
- . . S X=ENX,Y=ENY
  . S BEH=$$FIELD^DCTYPE(K,GL,3)
- . I BEH'="" D @(BEH_"(X,Y,PX,PY)")
+ . I BEH'="" D @(BEH_"(X,Y,PX,PY)") Q
+ . D ACTGOB(X,Y,PX,PY)
  QUIT
+ACTGOB(X,Y,PX,PY) ; goblin strategy: relentless pursuer within 6 tiles
+ N ENX,ENY
+ I $$DIST(X,Y,PX,PY)'>1 D ATTACK(X,Y,"g") Q
+ I $$DIST(X,Y,PX,PY)<6,$$STEPTO(X,Y,PX,PY,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY) Q
+ I $$RANDSTEP(X,Y,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY)
+ QUIT
+ACTRAT(X,Y,PX,PY) ; rat strategy: scurries in when healthy, flees when wounded (hp<=1)
+ N ENX,ENY,HP,D
+ S HP=$$ENTHP(Y,X),D=$$DIST(X,Y,PX,PY)
+ I HP'>1,D<5 D  Q
+ . I $$FLEE(X,Y,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY) Q
+ . I D'>1 D ATTACK(X,Y,"r")
+ I D'>1 D ATTACK(X,Y,"r") Q
+ I D<4,$$STEPTO(X,Y,PX,PY,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY) Q
+ I $$RANDSTEP(X,Y,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY)
+ QUIT
+ACTBAT(X,Y,PX,PY) ; bat strategy: erratic flutterer (50% random jitter, 50% swoop)
+ N ENX,ENY
+ I $$DIST(X,Y,PX,PY)'>1 D ATTACK(X,Y,"b") Q
+ I $R(2)=0,$$RANDSTEP(X,Y,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY) Q
+ I $$DIST(X,Y,PX,PY)<7,$$STEPTO(X,Y,PX,PY,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY) Q
+ I $$RANDSTEP(X,Y,PX,PY,.ENX,.ENY) D MOVE(X,Y,ENX,ENY)
+ QUIT
+ATTACK(X,Y,GL) ; enemy attacks adjacent player
+ N DMG,NM
+ S DMG=+$$FIELD^DCTYPE("enemy",GL,2)
+ S NM=$$FIELD^DCTYPE("enemy",GL,1)
+ D DAMAGE^DCPLAY(DMG,"slain by "_NM)
+ D FLASH^DCTERM(NM_" attacks you for "_DMG_".")
+ QUIT
+MOVE(X,Y,ENX,ENY) ; move entity from X,Y to ENX,ENY preserving glyph and HP
+ N REC,GL
+ S REC=$G(^G("ent",Y,X))
+ I REC="" Q
+ S GL=$P(REC,"^",1)
+ K ^G("ent",Y,X)
+ S ^G("ent",ENY,ENX)=REC
+ D REPAINT^DCMAP(X,Y)
+ D PUTCH^DCTERM(ENX,ENY,GL,$$COLOR^DCTYPE(GL))
+ QUIT
+STEPTO(X,Y,GX,GY,PX,PY,ENX,ENY) ; choose a valid step toward (GX,GY). 1 if found.
+ N DX,DY,ADX,ADY,TX,TY
+ S DX=GX-X,DY=GY-Y
+ S ADX=$S(DX<0:-DX,1:DX),ADY=$S(DY<0:-DY,1:DY)
+ I ADX'<ADY D  Q $D(ENX)
+ . I DX'=0 S TX=X+$S(DX>0:1,1:-1),TY=Y I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY Q
+ . I DY'=0 S TX=X,TY=Y+$S(DY>0:1,1:-1) I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY
+ I DY'=0 S TX=X,TY=Y+$S(DY>0:1,1:-1) I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY Q 1
+ I DX'=0 S TX=X+$S(DX>0:1,1:-1),TY=Y I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY Q 1
+ Q 0
+FLEE(X,Y,PX,PY,ENX,ENY) ; choose a valid step away from (PX,PY). 1 if found.
+ N GX,GY
+ S GX=X+(X-PX),GY=Y+(Y-PY)
+ Q $$STEPTO(X,Y,GX,GY,PX,PY,.ENX,.ENY)
+RANDSTEP(X,Y,PX,PY,ENX,ENY) ; try a random cardinal step. 1 if valid.
+ N DIR,TX,TY
+ S DIR=$R(4),TX=X,TY=Y
+ I DIR=0 S TY=TY-1
+ I DIR=1 S TY=TY+1
+ I DIR=2 S TX=TX-1
+ I DIR=3 S TX=TX+1
+ I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY Q 1
+ Q 0
 CANMOVE(X,Y,PX,PY) ; 1 if enemy can move to X,Y
  I X=PX,Y=PY Q 0
  I $D(^G("ent",Y,X)) Q 0

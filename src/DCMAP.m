@@ -1,10 +1,22 @@
-DCMAP ; map state
+DCMAP ; map state - v2.0.0
  ; ^G("map",row) holds row strings
  ; single source of truth for terrain
  QUIT
-LOAD ; read txt/dungeon.txt row by row into ^G("map")
- N F,R,L
- S F="txt/dungeon.txt"
+MAXFLOOR() ; count sequential txt/dungeon_N.txt files (1..99), default 1
+ N N,Z,F
+ S Z=$ZSEARCH("")
+ S N=0
+ F  S F="txt/dungeon_"_(N+1)_".txt" Q:$ZSEARCH(F)=""  S N=N+1 Q:N'<99
+ Q $S(N>0:N,1:1)
+LOAD(FLOOR) ; read txt/dungeon_<FLOOR>.txt (fallback txt/dungeon.txt) into ^G("map")
+ N F,R,L,Z
+ S Z=$ZSEARCH("")
+ S F=""
+ I +$G(FLOOR)>0 D
+ . N CAND
+ . S CAND="txt/dungeon_"_FLOOR_".txt"
+ . I $ZSEARCH(CAND)'="" S F=CAND
+ I F="" S F="txt/dungeon.txt"
  K ^G("map")
  O F:(READONLY):5 E  W "cannot open "_F Q
  U F
@@ -17,10 +29,23 @@ LOAD ; read txt/dungeon.txt row by row into ^G("map")
  C F
  U $P
  QUIT
-PAINT ; draw the entire map once
- N R,MAX
+PAINT ; draw the entire map with ANSI colors from ^TYPE
+ N R,C,MAX,ROW,GL,COL,CURCOL
  S MAX=$O(^G("map",""),-1)
- F R=0:1:MAX D MOVECUR^DCTERM(0,R) W $G(^G("map",R))
+ F R=0:1:MAX D
+ . S ROW=$G(^G("map",R))
+ . D MOVECUR^DCTERM(0,R)
+ . S CURCOL=""
+ . F C=1:1:$L(ROW) D
+ . . S GL=$E(ROW,C)
+ . . S COL=$$COLOR^DCTYPE(GL)
+ . . I COL'=CURCOL D
+ . . . I COL="" W $C(27)_"[0m"
+ . . . E  W $C(27)_"[0;"_COL_"m"
+ . . . S CURCOL=COL
+ . . W GL
+ . I CURCOL'="" W $C(27)_"[0m"
+ . S $X=$L(ROW),$Y=R
  QUIT
 GLYPHAT(X,Y) ; glyph at X,Y from ^G("map"). empty string if out of range.
  Q $E($G(^G("map",Y)),X+1)
@@ -33,14 +58,12 @@ SETCELL(X,Y,G) ; patch a single cell in the map string
  QUIT
 PASS(X,Y) ; 1 if player can enter X,Y, 0 otherwise
  N G,K
- ; enemies block movement; you bump them and take damage
+ ; enemies block movement; bumping attacks them
  I $D(^G("ent",Y,X)) Q 0
  S G=$$GLYPHAT(X,Y)
  I G="" Q 0
  S K=$$KIND^DCTYPE(G)
- I K="wall" Q 0
- I K="void" Q 0
- I K="" Q 0
+ I K="wall"!(K="void")!(K="") Q 0
  I K="door",G="+" Q $$HAS^DCINV("(")
  Q 1
 EPASS(X,Y) ; 1 if enemy can enter X,Y, 0 otherwise
@@ -52,19 +75,21 @@ EPASS(X,Y) ; 1 if enemy can enter X,Y, 0 otherwise
  I K="wall"!(K="void")!(K="") Q 0
  I K="door",G="+" Q 0
  Q 1
-REPAINT(X,Y) ; redraw whatever is at X,Y (used when player leaves a cell)
- D MOVECUR^DCTERM(X,Y)
- W $$GLYPHAT(X,Y)
+REPAINT(X,Y) ; redraw colored terrain cell at X,Y
+ N GL
+ S GL=$$GLYPHAT(X,Y)
+ D PUTCH^DCTERM(X,Y,GL,$$COLOR^DCTYPE(GL))
  QUIT
 STEP(X,Y) ; player stepped on X,Y. apply effects.
- N K,G,BEH,V
+ N K,G,BEH,V,NM
  S G=$$GLYPHAT(X,Y)
  S K=$$KIND^DCTYPE(G)
  I K="trap" D  Q
  . S V=$$FIELD^DCTYPE(K,G,2)
  . S BEH=$$FIELD^DCTYPE(K,G,3)
- . D DAMAGE^DCPLAY(V)
- . D FLASH^DCTERM($$FIELD^DCTYPE(K,G,1)_" hits you for "_V_".")
+ . S NM=$$FIELD^DCTYPE(K,G,1)
+ . D DAMAGE^DCPLAY(V,NM)
+ . D FLASH^DCTERM(NM_" hits you for "_V_".")
  . I BEH'="" D @(BEH_"(X,Y)")
  I K="item" D  Q
  . S BEH=$$FIELD^DCTYPE(K,G,3)
@@ -75,7 +100,8 @@ STEP(X,Y) ; player stepped on X,Y. apply effects.
  . D SETCELL(X,Y,"/")
  . D FLASH^DCTERM("the door unlocks.")
  I K="exit" D  Q
- . S ^G("won")=1
+ . S BEH=$$FIELD^DCTYPE(K,G,3)
+ . I BEH'="" D @(BEH_"(X,Y)")
  QUIT
 TRAPSP(X,Y) ; spike trap triggers once then disarms
  D SETCELL(X,Y," ")
@@ -86,7 +112,7 @@ ITEMPO(X,Y) ; potion, heal 5
  D HEAL^DCPLAY(5)
  D FLASH^DCTERM("you drink a potion. +5 hp.")
  QUIT
-ITEMME(X,Y) ; meat, heal 10
+ITEMME(X,Y) ; vegan meat, heal 10
  D HEAL^DCPLAY(10)
  D FLASH^DCTERM("you eat some vegan meat. +10 hp.")
  QUIT
@@ -110,5 +136,14 @@ ITEMGO(X,Y) ; gold
  S ^G("score")=+$G(^G("score"))+10
  D FLASH^DCTERM("you pick up gold. +10.")
  QUIT
-EXITST(X,Y) ;
+ITEMDG(X,Y) ; dagger (+1 atk)
+ D UPATK^DCPLAY(1)
+ D FLASH^DCTERM("you equip a dagger! (+1 atk, now "_$$ATK^DCPLAY_")")
+ QUIT
+ITEMSW(X,Y) ; sword (+2 atk)
+ D UPATK^DCPLAY(2)
+ D FLASH^DCTERM("you equip a sword! (+2 atk, now "_$$ATK^DCPLAY_")")
+ QUIT
+EXITST(X,Y) ; stairs trigger floor descent or win in DCRAWL
+ S ^G("descend")=1
  QUIT

@@ -1,4 +1,4 @@
-.PHONY: run compile clean generate run-local
+.PHONY: run compile clean generate run-local test
 
 # assumes $ydb_dist/$gtm_dist is set by sourcing ydb_env_set or gtmprofile first
 # point routine search path at src/ so routine resolution finds what it needs
@@ -16,6 +16,9 @@ run: compile
 
 generate:
 	python3 generate_dungeons.py
+
+test: compile
+	python3 tests/test_dcrawl.py
 
 clean:
 	rm -f src/*.o
