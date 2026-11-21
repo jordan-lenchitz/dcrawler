@@ -89,19 +89,20 @@ the top 8 runs appear automatically on win or death (highlighting the run you ju
 
 ## dungeon generation
 
-to generate fresh dungeon layouts:
+dungeon generation is written natively in MUMPS (`src/DCGEN.m`). to generate fresh dungeon layouts:
 
 ```
+source /usr/local/etc/ydb_env_set   # or gtmprofile
 make generate
 ```
 
-or run the generator directly with optional flags:
+or customize floor count / output directory with environment variables:
 
 ```
-python3 generate_dungeons.py --floors 25 --out txt --seed 42
+DCGEN_FLOORS=25 DCGEN_OUT=txt make generate
 ```
 
-by default this writes 25 floors (`txt/dungeon_1.txt` through `txt/dungeon_25.txt`). each floor is a 20x60 grid of non-overlapping rectangular rooms connected by corridors, wrapped in stone walls and void. the generator places a locked door `+` guarding the exit room and runs BFS checks to guarantee the key `(` is reachable before the door, the exit `>` cannot be reached without unlocking the door, and no enemy spawns right next to `@`. deeper floors scale up room count, enemy count, goblin frequency, traps, and stronger food/weapons.
+by default this writes 25 floors (`txt/dungeon_1.txt` through `txt/dungeon_25.txt`). each floor is a 20x60 grid of non-overlapping rectangular rooms connected by corridors, wrapped in stone walls and void. `DCGEN` places a locked door `+` guarding the exit room and runs BFS checks in MUMPS local arrays to guarantee the key `(` is reachable before the door, the exit `>` cannot be reached without unlocking the door, and no enemy spawns right next to `@`. deeper floors scale up room count, enemy count, goblin frequency, traps, and stronger food/weapons. `GENMAP^DCGEN(FLOOR)` also exposes direct generation into `^G("map")` for future live infinite procedural runs.
 
 ## testing
 
@@ -110,13 +111,10 @@ source /usr/local/etc/ydb_env_set   # or gtmprofile
 make test
 ```
 
-compiles all MUMPS routines and runs `tests/test_dcrawl.py`, an automated 30x80 ANSI PTY test suite using an isolated temporary database directory (so tests never touch your real `^SCORES`). it checks:
+compiles all MUMPS routines and runs two suites against isolated temporary YottaDB databases (so tests never touch your real `^SCORES`):
 
-- strict invariants across all 25 on-disk `txt/dungeon_1..25.txt` files plus 50 stress-generated floors and `flr 1/25` boot detection
-- goblin chasing, 4-hit unarmed kill, weapon stacking, 1-shot kill, combat death cause, wounded rat fleeing, bat terrain preservation, and `EPASS` blocking enemies behind closed doors even when the player holds a key
-- spike trap disarming, poison persistence, all vegan foods and potion healing with hp cap, and multi-key inventory consumption
-- full 10-floor sequential descent and win, all 4 movement input schemes (CSI arrows, SS3 arrows, `wasd`, `hjkl`), wall collisions, `esc` handling, `inspect` exit keys, and `z` help screen
-- multi-session `^SCORES` persistence and descending collation ranking across 3 separate runs
+- **`tests/DCTEST.m`** (native MUMPS test suite): verifies strict invariants & BFS reachability across all 25 on-disk `txt/dungeon_1..25.txt` files plus 50 stress-generated `DCGEN` floors and live `GENMAP^DCGEN`, `DCTYPE` lookups, `MAXFLOOR`/`LOAD^DCMAP`, goblin chasing, 4-hit unarmed kill, weapon stacking, 1-shot kill, combat death cause, wounded rat fleeing, bat terrain preservation, `EPASS` closed-door blocking even with a key, spike disarming, poison persistence, all vegan foods & potion healing with HP cap, multi-key inventory consumption, stairs descent trigger, and `^SCORES` descending collation ranking.
+- **`tests/test_pty_smoke.py`** (minimal 30x80 ANSI PTY smoke test): verifies real terminal boot (`flr 1/25`, `$X`/`$Y`, `$H`/`$J`, ANSI colors), all 4 movement input schemes (CSI arrows, SS3 arrows, `wasd`, `hjkl`), wall collisions, `esc` handling, `inspect` mode cursor/exit keys, `z` help screen, `t` scores overlay, and multi-floor win.
 
 ## design notes
 
@@ -139,13 +137,14 @@ every glyph's meaning, color, strategy/behavior, and enemy hp is one row in `^TY
 
 the behavior field (third caret-separated slot) is a label in `DCMAP.m` for items, traps, and exits, or a strategy label in `DCENT.m` invoked on each tick with `(X,Y,PX,PY)`. parenthesized indirection via `D @(BEH_"(...)")` handles dispatch.
 
-add the new glyph to a dungeon file in `txt/` (or `generate_dungeons.py`) and it just works.
+add the new glyph to a dungeon file in `txt/` (or `src/DCGEN.m`) and it just works.
 
 ## layout
 
 ```
 src/
   DCENT.m                 entity overlay, combat hit/kill, npc strategy (ACTGOB/ACTRAT/ACTBAT)
+  DCGEN.m                 native MUMPS procedural room-and-corridor dungeon generator
   DCINV.m                 inventory add / has / count / consume
   DCMAP.m                 multi-floor map load, color paint, passability, item/trap behaviors
   DCPLAY.m                player state: hp, atk, damage cause, start placement, alive check
@@ -157,8 +156,8 @@ txt/
   dungeon_1..25.txt       25 generated room-and-corridor floors
   dungeon.txt             fallback classic dungeon
 tests/
-  test_dcrawl.py          automated 30x80 ANSI PTY and generator test suite
+  DCTEST.m                native MUMPS unit, combat, ^SCORES & dungeon invariant test suite
+  test_pty_smoke.py       minimal 30x80 ANSI PTY & key-handling smoke test
 INTRINSICS.md             describes the MUMPS intrinsics used in src/
 Makefile                  compile, run-local, generate, test, clean targets
-generate_dungeons.py      room-and-corridor dungeon generator
 ```
