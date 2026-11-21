@@ -177,7 +177,7 @@ scripts/
   run-session.sh          per-connection session launcher with shared DB & SIGHUP cleanup
   deploy-cloudrun.sh      one-command Google Cloud Run deployment helper
 .github/workflows/
-  docker-publish.yml      multi-arch GHCR image publishing workflow
+  docker-publish.yml      GHCR image publishing workflow
 txt/
   dungeon_1..25.txt       25 generated room-and-corridor floors
   dungeon.txt             fallback classic dungeon
