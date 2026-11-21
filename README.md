@@ -68,7 +68,7 @@ everything on the map is colorized with ANSI escapes driven by `^TYPE`.
 
 there is combat now. bumping into an adjacent enemy hits it for your current `atk` (starting at 1, upgraded by picking up daggers and swords). if it survives, enemies still take their turn, so it can hit back. slaying a goblin awards +10 gold; rats and bats award +5 gold. healing items never exceed max hp (10).
 
-stepping on `>` descends sequentially through `txt/dungeon_1.txt` to `txt/dungeon_10.txt` (auto-detected up to 99 sequential floors, falling back to `txt/dungeon.txt` if numbered files are missing). your hp, atk, gold, and unused keys carry over between floors, and clearing a floor adds +25 gold. reaching the stairs on the final floor wins the run.
+stepping on `>` descends sequentially through `txt/dungeon_1.txt` to `txt/dungeon_25.txt` (auto-detected up to 99 sequential floors, falling back to `txt/dungeon.txt` if numbered files are missing). your hp, atk, gold, and unused keys carry over between floors, and clearing a floor adds +25 gold. reaching the stairs on the final floor wins the run.
 
 ## hud and high scores
 
@@ -98,10 +98,10 @@ make generate
 or run the generator directly with optional flags:
 
 ```
-python3 generate_dungeons.py --floors 10 --out txt --seed 42
+python3 generate_dungeons.py --floors 25 --out txt --seed 42
 ```
 
-by default this writes 10 floors (`txt/dungeon_1.txt` through `txt/dungeon_10.txt`). each floor is a 20x60 grid of non-overlapping rectangular rooms connected by corridors, wrapped in stone walls and void. the generator places a locked door `+` guarding the exit room and runs BFS checks to guarantee the key `(` is reachable before the door, the exit `>` cannot be reached without unlocking the door, and no enemy spawns right next to `@`. deeper floors scale up room count, enemy count, goblin frequency, traps, and stronger food/weapons.
+by default this writes 25 floors (`txt/dungeon_1.txt` through `txt/dungeon_25.txt`). each floor is a 20x60 grid of non-overlapping rectangular rooms connected by corridors, wrapped in stone walls and void. the generator places a locked door `+` guarding the exit room and runs BFS checks to guarantee the key `(` is reachable before the door, the exit `>` cannot be reached without unlocking the door, and no enemy spawns right next to `@`. deeper floors scale up room count, enemy count, goblin frequency, traps, and stronger food/weapons.
 
 ## testing
 
@@ -112,7 +112,7 @@ make test
 
 compiles all MUMPS routines and runs `tests/test_dcrawl.py`, an automated 30x80 ANSI PTY test suite using an isolated temporary database directory (so tests never touch your real `^SCORES`). it checks:
 
-- strict invariants across all 10 on-disk `txt/dungeon_1..10.txt` files plus 30 stress-generated floors
+- strict invariants across all 25 on-disk `txt/dungeon_1..25.txt` files plus 50 stress-generated floors and `flr 1/25` boot detection
 - goblin chasing, 4-hit unarmed kill, weapon stacking, 1-shot kill, combat death cause, wounded rat fleeing, bat terrain preservation, and `EPASS` blocking enemies behind closed doors even when the player holds a key
 - spike trap disarming, poison persistence, all vegan foods and potion healing with hp cap, and multi-key inventory consumption
 - full 10-floor sequential descent and win, all 4 movement input schemes (CSI arrows, SS3 arrows, `wasd`, `hjkl`), wall collisions, `esc` handling, `inspect` exit keys, and `z` help screen
@@ -154,7 +154,7 @@ src/
   DCTERM.m                raw mode, NOWRAP, color PUTCH, ANSI arrow-key READKEY
   DCTYPE.m                type registry (label^value^behavior^color^hp) and lookup helpers
 txt/
-  dungeon_1..10.txt       10 generated room-and-corridor floors
+  dungeon_1..25.txt       25 generated room-and-corridor floors
   dungeon.txt             fallback classic dungeon
 tests/
   test_dcrawl.py          automated 30x80 ANSI PTY and generator test suite

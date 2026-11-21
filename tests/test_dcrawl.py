@@ -251,28 +251,34 @@ def _verify_dungeon_grid(rows, label):
 
 
 def test_generator_and_repo_floors():
-    """Verify all 10 on-disk repo dungeons AND 30 freshly generated floors across seeds."""
+    """Verify all 25 on-disk repo dungeons AND 50 freshly generated floors across seeds."""
     sys.path.insert(0, REPO_ROOT)
     import generate_dungeons as gd
 
-    assert gd.NUM_DUNGEONS == 10, f"Expected NUM_DUNGEONS=10, got {gd.NUM_DUNGEONS}"
+    assert gd.NUM_DUNGEONS == 25, f"Expected NUM_DUNGEONS=25, got {gd.NUM_DUNGEONS}"
 
-    # Verify all 10 committed/generated repo dungeons on disk
-    for floor in range(1, 11):
+    # Verify all 25 committed/generated repo dungeons on disk
+    for floor in range(1, 26):
         path = os.path.join(REPO_ROOT, "txt", f"dungeon_{floor}.txt")
         assert os.path.exists(path), f"Missing repo floor file: {path}"
         with open(path) as f:
             rows = [line.rstrip("\r\n") for line in f]
         _verify_dungeon_grid(rows, f"repo dungeon_{floor}.txt")
 
-    # Stress-test 3 seeds x 10 floors = 30 procedural floors
-    for seed in (7, 42, 999):
+    # Stress-test 2 seeds x 25 floors = 50 procedural floors
+    for seed in (7, 42):
         rng = gd.random.Random(seed)
-        for floor in range(1, 11):
+        for floor in range(1, 26):
             rows = gd.generate_dungeon(floor=floor, rng=rng)
             _verify_dungeon_grid(rows, f"seed={seed} floor={floor}")
 
-    print("[PASS] generator: all 10 repo floors + 30 stress-generated floors pass strict invariants")
+    # Verify MUMPS MAXFLOOR detects all 25 repo floors at boot
+    with tempfile.TemporaryDirectory() as ydb:
+        rc, snaps, raw = run_dcrawl_session(REPO_ROOT, ydb, [("quit", ["q"])])
+        assert rc == 0, f"repo boot rc={rc}\n{raw[-400:]}"
+        assert "flr 1/25" in snaps[0]["status"], f"Expected flr 1/25 on repo boot: {snaps[0]['status']}"
+
+    print("[PASS] generator: all 25 repo floors + 50 stress-generated floors & flr 1/25 boot verified")
 
 
 def test_enemy_logic_and_combat():

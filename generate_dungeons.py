@@ -6,7 +6,7 @@ from collections import deque
 DUNGEON_ROWS = 20
 DUNGEON_COLS = 60
 OUTPUT_DIR = "txt"
-NUM_DUNGEONS = 10
+NUM_DUNGEONS = 25
 
 GLYPHS = {
     "player_start": "@",
@@ -257,8 +257,8 @@ def try_generate_dungeon(floor, rng):
                 return p
         return None
 
-    # Weapon spawn scaled by floor (dagger on floors 1-3, sword on floors 4-10)
-    weapon_glyph = GLYPHS["dagger"] if floor <= 3 else GLYPHS["sword"]
+    # Weapon spawn scaled by floor (dagger on floors 1-6, sword on floors 7-25)
+    weapon_glyph = GLYPHS["dagger"] if floor <= 6 else GLYPHS["sword"]
     # Place weapon on player side of door so it's useful before the final room
     weapon_pool = [p for p in room_spots if p in reach_no_door and p not in used]
     if weapon_pool:
@@ -275,8 +275,8 @@ def try_generate_dungeon(floor, rng):
 
     food_pool = (
         ["apple", "bread"]
-        if floor <= 3
-        else (["bread", "meat", "tofu"] if floor <= 7 else ["meat", "tofu"])
+        if floor <= 6
+        else (["bread", "meat", "tofu"] if floor <= 15 else ["meat", "tofu"])
     )
     for _ in range(rng.randint(2, 4)):
         p = pop_spot(room_spots)
@@ -284,17 +284,17 @@ def try_generate_dungeon(floor, rng):
             grid[p[0]][p[1]] = GLYPHS[rng.choice(food_pool)]
 
     # Gold
-    for _ in range(rng.randint(4 + floor // 2, 6 + floor)):
+    for _ in range(rng.randint(4 + floor // 4, min(16, 6 + floor // 2))):
         p = pop_spot(room_spots)
         if p:
             grid[p[0]][p[1]] = GLYPHS["gold"]
 
     # Enemies scaled by floor (never spawn right next to player start)
-    num_enemies = min(12, 2 + floor)
+    num_enemies = min(15, 2 + floor // 2)
     enemy_weights = (
         ["r", "r", "b", "g"]
-        if floor <= 3
-        else (["r", "b", "g", "g"] if floor <= 7 else ["b", "g", "g", "g"])
+        if floor <= 6
+        else (["r", "b", "g", "g"] if floor <= 15 else ["b", "g", "g", "g"])
     )
     for _ in range(num_enemies):
         p = pop_spot(safe_start_spots)
@@ -307,7 +307,7 @@ def try_generate_dungeon(floor, rng):
         for p in safe_start_spots
         if abs(p[0] - door_pos[0]) + abs(p[1] - door_pos[1]) > 1
     ]
-    for _ in range(min(9, 1 + floor)):
+    for _ in range(min(12, 1 + floor // 2)):
         p = pop_spot(trap_spots)
         if p:
             grid[p[0]][p[1]] = rng.choice([GLYPHS["spike_trap"], GLYPHS["poison_tile"]])
