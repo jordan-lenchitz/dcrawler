@@ -2,9 +2,9 @@ DCMAP ; map state
  ; ^G("map",row) holds row strings
  ; single source of truth for terrain
  QUIT
-LOAD ; read data/dungeon.txt row by row into ^G("map")
+LOAD ; read txt/dungeon.txt row by row into ^G("map")
  N F,R,L
- S F="data/dungeon.txt"
+ S F="txt/dungeon.txt"
  K ^G("map")
  O F:(READONLY):5 E  W "cannot open "_F Q
  U F
@@ -43,6 +43,15 @@ PASS(X,Y) ; 1 if player can enter X,Y, 0 otherwise
  I K="" Q 0
  I K="door",G="+" Q $$HAS^DCINV("(")
  Q 1
+EPASS(X,Y) ; 1 if enemy can enter X,Y, 0 otherwise
+ N G,K
+ I $D(^G("ent",Y,X)) Q 0
+ S G=$$GLYPHAT(X,Y)
+ I G="" Q 0
+ S K=$$KIND^DCTYPE(G)
+ I K="wall"!(K="void")!(K="") Q 0
+ I K="door",G="+" Q 0
+ Q 1
 REPAINT(X,Y) ; redraw whatever is at X,Y (used when player leaves a cell)
  D MOVECUR^DCTERM(X,Y)
  W $$GLYPHAT(X,Y)
@@ -56,10 +65,10 @@ STEP(X,Y) ; player stepped on X,Y. apply effects.
  . S BEH=$$FIELD^DCTYPE(K,G,3)
  . D DAMAGE^DCPLAY(V)
  . D FLASH^DCTERM($$FIELD^DCTYPE(K,G,1)_" hits you for "_V_".")
- . I BEH'="" D @BEH(X,Y)
+ . I BEH'="" D @(BEH_"(X,Y)")
  I K="item" D  Q
  . S BEH=$$FIELD^DCTYPE(K,G,3)
- . I BEH'="" D @BEH(X,Y)
+ . I BEH'="" D @(BEH_"(X,Y)")
  . D SETCELL(X,Y," ")
  I K="door",G="+" D  Q
  . D CONSUME^DCINV("(")

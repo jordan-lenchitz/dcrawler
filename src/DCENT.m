@@ -18,55 +18,70 @@ DRAWENT ; pass over ^G("map"), pull enemies into ^G("ent"), repaint those cells 
  . . D MOVECUR^DCTERM(C,R)
  . . W GL
  QUIT
-TICK(PX,PY) ; give every enemy a turn. currently static (no movement) in the basic build.
+TICK(PX,PY) ; give every enemy a turn
+ ; snapshot positions first so moving entities never corrupts $O iteration
  ; the filter below (Y?1.N) keeps us safe against any non-numeric subscripts
- ; if a future extension ever adds scratch keys like ^G("ent","next",...).
- N Y,X,GL,K,BEH
- S Y=""
+ N Y,X,GL,K,BEH,LIST,CNT,IDX
+ S CNT=0,Y=""
  F  S Y=$O(^G("ent",Y)) Q:Y=""  D
  . I Y'?1.N Q
  . S X=""
  . F  S X=$O(^G("ent",Y,X)) Q:X=""  D
  . . I X'?1.N Q
- . . S GL=^G("ent",Y,X)
- . . S K=$$KIND^DCTYPE(GL)
- . . I K'="enemy" Q
- . . ; Smarter logic: move towards player if within 5 units, else random
- . . N DX,DY,DIST,ENX,ENY,OLDX,OLDY
- . . S OLDX=X,OLDY=Y
- . . S DX=PX-X,DY=PY-Y
- . . S DIST=$ZSQR(DX*DX+DY*DY)
- . . I DIST<5 D
- . . . S ENX=X,ENY=Y
- . . . I DX>0 S ENX=X+1
- . . . E  I DX<0 S ENX=X-1
- . . . I DY>0 S ENY=Y+1
- . . . E  I DY<0 S ENY=Y-1
+ . . S CNT=CNT+1,LIST(CNT)=Y_"^"_X
+ F IDX=1:1:CNT D
+ . S Y=$P(LIST(IDX),"^",1),X=$P(LIST(IDX),"^",2)
+ . I '$D(^G("ent",Y,X)) Q
+ . S GL=^G("ent",Y,X)
+ . S K=$$KIND^DCTYPE(GL)
+ . I K'="enemy" Q
+ . ; If already cardinally adjacent to player, attack using ^TYPE damage
+ . I $$DIST(X,Y,PX,PY)'>1 D  Q
+ . . N DMG,NM
+ . . S DMG=+$$FIELD^DCTYPE(K,GL,2)
+ . . S NM=$$FIELD^DCTYPE(K,GL,1)
+ . . D DAMAGE^DCPLAY(DMG)
+ . . D FLASH^DCTERM(NM_" attacks you for "_DMG_".")
+ . ; Smarter logic: move towards player if within 5 units, else random
+ . N DX,DY,ADX,ADY,DIST,ENX,ENY,MOVED
+ . S DX=PX-X,DY=PY-Y
+ . S ADX=$S(DX<0:-DX,1:DX),ADY=$S(DY<0:-DY,1:DY)
+ . S DIST=$$DIST(X,Y,PX,PY)
+ . S ENX=X,ENY=Y,MOVED=0
+ . I DIST<5 D
+ . . ; Try primary axis toward player first, fall back to secondary axis
+ . . N TX,TY
+ . . I ADX'<ADY D
+ . . . S TX=X+$S(DX>0:1,DX<0:-1,1:0),TY=Y
+ . . . I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1 Q
+ . . . I DY'=0 S TX=X,TY=Y+$S(DY>0:1,1:-1) I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1
  . . E  D
- . . . N DIR
- . . . S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
- . . . S ENX=X,ENY=Y
- . . . I DIR=0 S ENY=ENY-1 ; Up
- . . . I DIR=1 S ENY=ENY+1 ; Down
- . . . I DIR=2 S ENX=ENX-1 ; Left
- . . . I DIR=3 S ENX=ENX+1 ; Right
- . . ; Check if new position is valid (passable, not player, not another enemy)
- . . I $$PASS^DCMAP(ENX,ENY),'(ENX=PX&(ENY=PY)),'$D(^G("ent",ENY,ENX)) D
- . . . ; If adjacent to player, attack
- . . . I $$DIST(ENX,ENY,PX,PY)'>1 D
- . . . . D DAMAGE^DCPLAY(1) ; Simple 1 damage attack
- . . . . D FLASH^DCTERM("enemy attacks you for 1 damage.")
- . . . . Q
- . . . ; Move enemy
- . . . K ^G("ent",OLDY,OLDX)
- . . . S ^G("ent",ENY,ENX)=GL
- . . . D MOVECUR^DCTERM(OLDX,OLDY) W $$GLYPHAT^DCMAP(OLDX,OLDY) ; repaint old spot
- . . . D MOVECUR^DCTERM(ENX,ENY) W GL ; paint new spot
- . . . S X=ENX,Y=ENY ; update current X,Y for next iteration if moved
- . . S BEH=$$FIELD^DCTYPE(K,GL,3)
- . . I BEH'="" D @BEH(X,Y,PX,PY)
+ . . . S TX=X,TY=Y+$S(DY>0:1,DY<0:-1,1:0)
+ . . . I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1 Q
+ . . . I DX'=0 S TX=X+$S(DX>0:1,1:-1),TY=Y I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1
+ . E  D
+ . . N DIR,TX,TY
+ . . S DIR=$R(4) ; 0:up, 1:down, 2:left, 3:right
+ . . S TX=X,TY=Y
+ . . I DIR=0 S TY=TY-1 ; Up
+ . . I DIR=1 S TY=TY+1 ; Down
+ . . I DIR=2 S TX=TX-1 ; Left
+ . . I DIR=3 S TX=TX+1 ; Right
+ . . I $$CANMOVE(TX,TY,PX,PY) S ENX=TX,ENY=TY,MOVED=1
+ . I MOVED D
+ . . K ^G("ent",Y,X)
+ . . S ^G("ent",ENY,ENX)=GL
+ . . D MOVECUR^DCTERM(X,Y) W $$GLYPHAT^DCMAP(X,Y) ; repaint old spot
+ . . D MOVECUR^DCTERM(ENX,ENY) W GL ; paint new spot
+ . . S X=ENX,Y=ENY
+ . S BEH=$$FIELD^DCTYPE(K,GL,3)
+ . I BEH'="" D @(BEH_"(X,Y,PX,PY)")
  QUIT
-DIST(X1,Y1,X2,Y2) ; Distance formula
+CANMOVE(X,Y,PX,PY) ; 1 if enemy can move to X,Y
+ I X=PX,Y=PY Q 0
+ I $D(^G("ent",Y,X)) Q 0
+ Q $$EPASS^DCMAP(X,Y)
+DIST(X1,Y1,X2,Y2) ; Euclidean distance (parenthesized for MUMPS left-to-right precedence)
  N DX,DY
  S DX=X1-X2,DY=Y1-Y2
- Q $ZSQR(DX*DX+DY*DY)
+ Q ((DX*DX)+(DY*DY))**0.5

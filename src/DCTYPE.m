@@ -30,7 +30,7 @@ SEED ;
  S ^TYPE("item","A")="apple^3^ITEMAP"
  S ^TYPE("item","B")="bread^7^ITEMBR"
  S ^TYPE("item","T")="tofu^15^ITEMTO"
- S ^TYPE("item","(")= "key^0^ITEMKE"
+ S ^TYPE("item","(")="key^0^ITEMKE"
  S ^TYPE("item","$")="gold^10^ITEMGO"
  ; exit
  S ^TYPE("exit",">")="stairs^0^EXITST"
