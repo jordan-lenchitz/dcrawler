@@ -203,7 +203,7 @@ QUIT ; clean exit: remove this job's live state, preserve shared ^SCORES
  D END^DCTERM
  QUIT
 TRAP ; $ETRAP handler: clean up ^G($J) on abrupt browser/PTY disconnect without touching closed $P
- S $ETRAP=""
+ S $ETRAP="ZHALT 1"
  S $ECODE=""
  K ^G($J)
  ZHALT 0

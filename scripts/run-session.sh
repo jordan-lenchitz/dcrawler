@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+umask 077
+ulimit -c 0
+ulimit -n 256 2>/dev/null || true
+
+# Disable terminal signal keys (^C, ^\, ^Z) and XON/XOFF flow control on the PTY
+stty -isig -ixon -ixoff 2>/dev/null || true
+trap '' INT QUIT TSTP
+
 export TERM="${TERM:-xterm-256color}"
 export LANG="${LANG:-C.UTF-8}"
 DB_DIR="${DCRAWL_DB_DIR:-/data/dcrawl}"
@@ -14,6 +22,14 @@ set -eu
 export ydb_routines="/app/src ${ydb_routines:-}"
 export gtmroutines="/app/src ${gtmroutines:-}"
 
+# Prevent YottaDB/GT.M from ever dropping to direct mode (YDB>/GTM>) on Ctrl-C or errors
+export ydb_nocenable=1
+export ydb_etrap="ZHALT 1"
+export ydb_zinterrupt="ZHALT 1"
+export gtm_nocenable=1
+export gtm_etrap="ZHALT 1"
+export gtm_zinterrupt="ZHALT 1"
+
 cd /app
 
 # Run game preserving PTY stdin (<&0) and guarantee ^G($J) cleanup on abrupt browser disconnect
@@ -26,7 +42,7 @@ cleanup() {
   mumps -run %XCMD "D CLEANUP^DCRAWL($MUMPS_PID)" >/dev/null 2>&1 || true
   exit 0
 }
-trap cleanup HUP TERM INT
+trap cleanup HUP TERM
 
 RC=0
 wait "$MUMPS_PID" || RC=$?

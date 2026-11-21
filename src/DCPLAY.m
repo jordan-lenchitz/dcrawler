@@ -38,9 +38,12 @@ HEAL(AMT) ;
 UPATK(AMT) ; upgrade player attack damage
  S ^G($J,"player","atk")=+$G(^G($J,"player","atk"),1)+AMT
  QUIT
-SETNAME(NM) ; set 3-letter arcade initials for this session (empty -> "---")
- N CLEAN
- S CLEAN=$TR($E($G(NM),1,3),"^","")
+SETNAME(NM) ; set 3-letter arcade initials for this session (alphanumeric only, empty -> "---")
+ N CLEAN,I,CH,RAW
+ S RAW=$G(NM),CLEAN=""
+ F I=1:1:$L(RAW) Q:$L(CLEAN)'<3  D
+ . S CH=$E(RAW,I)
+ . I CH?1AN S CLEAN=CLEAN_CH
  S ^G($J,"name")=$S(CLEAN'="":CLEAN,1:"---")
  QUIT
 NAME() Q $G(^G($J,"name"),"---")

@@ -433,6 +433,14 @@ TSCORES ; persistent ^SCORES recording, 3-letter initials, LEADER & descending c
  D ASSERT($P(REC,"^",5)[",","^SCORES should store $H")
  D ASSERT(+$P(REC,"^",6)>0,"^SCORES should store $ZUT")
  D ASSERT(+$P(REC,"^",7)>0,"^SCORES should store $J")
+ ; verify SETNAME strips ANSI/control bytes and PRUNE^DCSCORE caps ^SCORES
+ D SETNAME^DCPLAY($C(27)_"[A1!")
+ D ASSERT($$NAME^DCPLAY="A1","SETNAME should strip control/non-alnum chars")
+ D PRUNE^DCSCORE(2)
+ S RANK=0,NEG=""
+ F  S NEG=$O(^SCORES("idx",NEG)) Q:NEG=""  S ID="" F  S ID=$O(^SCORES("idx",NEG,ID)) Q:ID=""  S RANK=RANK+1
+ D ASSERT(RANK=2,"PRUNE^DCSCORE(2) should retain top 2 runs, got "_RANK)
+ D ASSERT($$LEADER^DCSCORE="JRD^50^3^WIN","PRUNE^DCSCORE must preserve top leader")
  K ^G($J)
- U $P W "[PASS] ^SCORES: 4-run persistence, 3-char initials, LEADER & descending collation verified",!
+ U $P W "[PASS] ^SCORES: 4-run persistence, 3-char initials, LEADER, pruning & collation verified",!
  QUIT

@@ -13,7 +13,19 @@ RECORD(RESULT) ; record finished run in ^SCORES, return run ID
  S ID=$I(^SCORES("seq"))
  S ^SCORES("run",ID)=SCORE_"^"_FLOOR_"^"_RESULT_"^"_CAUSE_"^"_NOW_"^"_ZUT_"^"_$J_"^"_NM
  S ^SCORES("idx",-SCORE,ID)=""
+ D PRUNE(200)
  Q ID
+PRUNE(LIMIT) ; keep at most LIMIT top-scoring runs to bound in-memory DB growth
+ N CNT,NEG,ID
+ L +^SCORES("prune"):1 E  Q
+ S CNT=0,NEG=""
+ F  S NEG=$O(^SCORES("idx",NEG)) Q:NEG=""  D
+ . S ID=""
+ . F  S ID=$O(^SCORES("idx",NEG,ID)) Q:ID=""  D
+ . . S CNT=CNT+1
+ . . I CNT>LIMIT K ^SCORES("idx",NEG,ID),^SCORES("run",ID)
+ L -^SCORES("prune")
+ QUIT
 LEADER() ; return "name^score^floor^result" for current #1 in ^SCORES, or "" if empty
  N NEG,ID,REC,NM
  S NEG=$O(^SCORES("idx",""))

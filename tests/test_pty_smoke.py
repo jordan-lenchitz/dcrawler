@@ -137,6 +137,7 @@ def main():
             ("wasd", ["w", "d", "s", "a"]),
             ("hjkl", ["k", "l", "j", "h"]),
             ("wall", ["a", "a", "a", "a"]),
+            ("ctrl_hardening", ["\x03", "\x1c", "\x1a"]),
             ("esc", [ESC]),
             ("inspect", ["i", CSI[1], "\r", "i", SS3[1], " ", "i", CSI[3], ESC]),
             ("help", ["z"]),
@@ -156,6 +157,9 @@ def main():
         for k in ("csi", "ss3", "wasd", "hjkl"):
             assert "$X 4" in strip_ansi(out[k]) and "$Y 3" in strip_ansi(out[k]), f"bad pos after {k}"
         assert "$X 2" in strip_ansi(out["wall"]), "wall bump failed"
+        assert "YDB>" not in strip_ansi(out["ctrl_hardening"]) and "GTM>" not in strip_ansi(out["ctrl_hardening"]), (
+            f"Ctrl-C/breakout reached direct mode: {out['ctrl_hardening']!r}"
+        )
         assert "press q to quit" in strip_ansi(out["esc"]), "ESC hint missing"
         assert "\x1b[?25h" in out["inspect"] and "\x1b[?25l" in out["inspect"], "inspect cursor toggle"
         assert "current MUMPS job" in strip_ansi(out["help"]) and "floors 1-2" in strip_ansi(out["help"])

@@ -1,8 +1,8 @@
 DCTERM ; terminal handling - v2.2.0
  ; encapsulates the ansi escapes so everything else can just ask for {,$}{X,Y}
  QUIT
-INIT ; raw mode on $PRINCIPAL (NOWRAP after WIDTH; HUPENABLE+EXCEPTION route disconnect to TRAP^DCRAWL)
- U $P:(NOECHO:NOESCAPE:WIDTH=512:NOWRAP:LENGTH=40:TERMINATOR="":HUPENABLE:EXCEPTION="D TRAP^DCRAWL")
+INIT ; raw mode on $PRINCIPAL (NOWRAP after WIDTH; NOCENABLE blocks Ctrl-C breakout; HUPENABLE+EXCEPTION route disconnect to TRAP^DCRAWL)
+ U $P:(NOECHO:NOESCAPE:NOCENABLE:CTRAP="":WIDTH=512:NOWRAP:LENGTH=40:TERMINATOR="":HUPENABLE:EXCEPTION="D TRAP^DCRAWL")
  W $C(27)_"[?25l"      ; hide the cursor, we draw @ ourselves
  QUIT
 END ; restore terminal for the human's return to sanity
