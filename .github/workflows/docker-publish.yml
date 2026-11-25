@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,21 +14,22 @@ permissions:
   security-events: write
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  build:
+    name: Build, Test & Scan (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            uname: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            uname: aarch64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/checkout@v7
 
       - name: Extract Docker metadata
         id: meta
@@ -38,32 +41,153 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,prefix=sha-
 
-      - name: Build amd64 image for scanning
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          load: true
-          tags: dcrawler:ci-scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Build native ${{ matrix.arch }} image
+        env:
+          LABELS: ${{ steps.meta.outputs.labels }}
+        run: |
+          LABEL_ARGS=()
+          while IFS= read -r label; do
+            [[ -z "$label" ]] && continue
+            LABEL_ARGS+=(--label "$label")
+          done <<< "${LABELS}"
+          docker build \
+            --platform "linux/${{ matrix.arch }}" \
+            --provenance=false \
+            "${LABEL_ARGS[@]}" \
+            -t "dcrawler:ci-${{ matrix.arch }}" \
+            .
 
-      - name: Scan image with Trivy
+      - name: Verify native ${{ matrix.arch }} runtime & MUMPS tests
+        run: |
+          # Verify native architecture and YottaDB + ttyd binaries
+          ARCH_OUT="$(docker run --rm --platform "linux/${{ matrix.arch }}" --entrypoint bash "dcrawler:ci-${{ matrix.arch }}" -c '
+            set -euo pipefail
+            echo "uname=$(uname -m)"
+            ttyd --version
+            set +u
+            for v in $(compgen -v ydb_) $(compgen -v gtm); do unset "$v"; done
+            export ydb_dir=/data/dcrawl
+            source /usr/local/etc/ydb_env_set >/dev/null
+            set -u
+            export ydb_routines="/app/src ${ydb_routines}"
+            export gtmroutines="/app/src ${gtmroutines}"
+            cd /app
+            mumps -run %XCMD '\''W "zyrelease=",$ZYRELEASE,!'\''
+          ')"
+          printf '%s\n' "$ARCH_OUT"
+          printf '%s\n' "$ARCH_OUT" | grep -Fq "uname=${{ matrix.uname }}"
+          printf '%s\n' "$ARCH_OUT" | grep -Fq "${{ matrix.uname }}"
+
+          # Run native MUMPS test suite (^DCTEST) inside the built container
+          docker run --rm --platform "linux/${{ matrix.arch }}" \
+            -v "${PWD}/tests:/tmp/tests:ro" \
+            --entrypoint bash "dcrawler:ci-${{ matrix.arch }}" -c '
+              set -euo pipefail
+              set +u
+              for v in $(compgen -v ydb_) $(compgen -v gtm); do unset "$v"; done
+              export ydb_dir=/data/dcrawl
+              source /usr/local/etc/ydb_env_set >/dev/null
+              set -u
+              mkdir -p /tmp/test_o
+              mumps -object=/tmp/test_o/ /tmp/tests/DCTEST.m
+              export ydb_routines="/app/src /tmp/test_o ${ydb_routines}"
+              export gtmroutines="/app/src /tmp/test_o ${gtmroutines}"
+              cd /app
+              mumps -run "^DCTEST"
+            '
+
+          # Smoke-test web server mode (/healthz and ttyd root)
+          CID="$(docker run -d --platform "linux/${{ matrix.arch }}" -e DCRAWL_MODE=web -p 18080:8080 "dcrawler:ci-${{ matrix.arch }}")"
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/healthz | grep -qx "ok"; then
+              break
+            fi
+            if [[ "$i" -eq 20 ]]; then
+              docker logs "$CID" >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+          ROOT_HTML="$(curl -fsS http://127.0.0.1:18080/)"
+          [[ "$ROOT_HTML" == *"ttyd"* ]]
+
+      - name: Scan ${{ matrix.arch }} image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: dcrawler:ci-scan
+          image-ref: dcrawler:ci-${{ matrix.arch }}
           format: table
           exit-code: 1
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
 
-      - name: Push amd64 image to GHCR
-        uses: docker/build-push-action@v6
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
         with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push ${{ matrix.arch }} image to GHCR
+        if: github.event_name != 'pull_request'
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            arch_tag="${tag}-${{ matrix.arch }}"
+            docker tag "dcrawler:ci-${{ matrix.arch }}" "${arch_tag}"
+            for attempt in 1 2 3; do
+              docker push "${arch_tag}" && break
+              if [[ "$attempt" -eq 3 ]]; then
+                exit 1
+              fi
+              echo "Retrying push for ${arch_tag} (attempt ${attempt})..."
+              sleep 3
+            done
+          done <<< "${TAGS}"
+
+  merge-manifest:
+    name: Merge Multi-Arch Manifest
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifests
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          FIRST_TAG=""
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            [[ -z "$FIRST_TAG" ]] && FIRST_TAG="$tag"
+            docker buildx imagetools create \
+              -t "${tag}" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+          done <<< "${TAGS}"
+          if [[ -n "$FIRST_TAG" ]]; then
+            docker buildx imagetools inspect "${FIRST_TAG}"
+          fi

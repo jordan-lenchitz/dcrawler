@@ -1,7 +1,10 @@
-.PHONY: run compile clean generate run-local test test-mumps test-pty
+.PHONY: run compile clean generate run-local test test-mumps test-pty docker-build docker-run docker-web
 
 # assumes $ydb_dist/$gtm_dist is set by sourcing ydb_env_set or gtmprofile first
 # point routine search path at src/ so routine resolution finds what it needs
+
+PLATFORM ?= linux/$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+IMAGE ?= dcrawler:local
 
 ROUTINES := $(wildcard src/*.m)
 TEST_ROUTINES := $(wildcard tests/*.m)
@@ -41,3 +44,12 @@ clean:
 # convenience: run from project root with routines path set (works on YottaDB & GT.M)
 run-local: compile
 	@ydb_routines="src $${ydb_routines}" gtmroutines="src $${gtmroutines}" mumps -run '^DCRAWL'
+
+docker-build:
+	docker build --platform $(PLATFORM) -t $(IMAGE) .
+
+docker-run: docker-build
+	docker run -it --rm --platform $(PLATFORM) $(IMAGE)
+
+docker-web: docker-build
+	docker run --rm --platform $(PLATFORM) -p 8080:8080 $(IMAGE) web

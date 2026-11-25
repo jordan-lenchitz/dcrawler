@@ -16,10 +16,11 @@ RUN set -eu; \
     apt-get update -qq; \
     apt-get upgrade -y --no-install-recommends; \
     apt-get install -y --no-install-recommends ca-certificates curl nginx-light tini; \
-    case "${TARGETARCH:-}" in \
-      amd64|"") TTYD_ARCH="x86_64";  TTYD_SHA256="${TTYD_SHA256_AMD64}" ;; \
-      arm64)    TTYD_ARCH="aarch64"; TTYD_SHA256="${TTYD_SHA256_ARM64}" ;; \
-      *)        echo "Unsupported arch: ${TARGETARCH:-}" >&2; exit 1 ;; \
+    ARCH="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+    case "${ARCH}" in \
+      amd64) TTYD_ARCH="x86_64";  TTYD_SHA256="${TTYD_SHA256_AMD64}" ;; \
+      arm64) TTYD_ARCH="aarch64"; TTYD_SHA256="${TTYD_SHA256_ARM64}" ;; \
+      *)     echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;; \
     esac; \
     curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${TTYD_ARCH}" -o /usr/local/bin/ttyd; \
     echo "${TTYD_SHA256}  /usr/local/bin/ttyd" | sha256sum -c -; \
@@ -40,7 +41,7 @@ COPY --chown=root:root scripts/run-session.sh scripts/docker-entrypoint.sh /app/
 RUN chmod 0755 /app /app/src /app/txt /app/config /app/scripts \
     && chmod 0644 /app/src/*.m /app/txt/*.txt /app/config/*.conf \
     && chmod 0755 /app/scripts/run-session.sh /app/scripts/docker-entrypoint.sh \
-    && bash -c 'source /usr/local/etc/ydb_env_set >/dev/null && for f in /app/src/*.m; do mumps -object=/app/src/ "$f" || exit 1; done' \
+    && bash -c 'YDB_ENV_SET="/usr/local/etc/ydb_env_set"; [ -f "$YDB_ENV_SET" ] || YDB_ENV_SET="/opt/yottadb/current/ydb_env_set"; source "$YDB_ENV_SET" >/dev/null && for f in /app/src/*.m; do mumps -object=/app/src/ "$f" || exit 1; done' \
     && chmod 0644 /app/src/*.o \
     && install -d -o dcrawl -g dcrawl -m 0700 /data/dcrawl
 

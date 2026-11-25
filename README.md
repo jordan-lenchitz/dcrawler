@@ -26,6 +26,8 @@ cd src && mumps -run '^DCRAWL'
 
 ### docker (one-command local play or browser server)
 
+multi-arch images (`linux/amd64` and `linux/arm64`, including Apple Silicon Macs) are published to GHCR.
+
 play locally in your terminal in one command (no local MUMPS setup needed):
 ```
 docker run -it --rm ghcr.io/jordan-lenchitz/dcrawler
@@ -34,6 +36,18 @@ docker run -it --rm ghcr.io/jordan-lenchitz/dcrawler
 or run the browser-playable `ttyd` server locally on port 8080:
 ```
 docker run --rm -p 8080:8080 ghcr.io/jordan-lenchitz/dcrawler
+```
+
+to build and run natively from source (auto-detects your host architecture):
+```
+make docker-run    # interactive terminal play
+make docker-web    # browser server on port 8080
+```
+
+to run the full local container end-to-end test suite (e.g. on Apple Silicon with Colima or Docker Desktop):
+```
+./scripts/test-arm64-colima.sh           # pull & verify ghcr.io linux/arm64 image
+./scripts/test-arm64-colima.sh --build   # build locally & verify
 ```
 
 to deploy the browser-playable server to Google Cloud Run (scale-to-zero, single shared `^SCORES` instance while warm):
@@ -176,6 +190,7 @@ scripts/
   docker-entrypoint.sh    container entrypoint (auto-selects ttyd web server or local CLI)
   run-session.sh          per-connection session launcher with shared DB & SIGHUP cleanup
   deploy-cloudrun.sh      one-command Google Cloud Run deployment helper
+  test-arm64-colima.sh    local multi-arch / Apple Silicon Colima end-to-end test suite
 .github/workflows/
   docker-publish.yml      GHCR image publishing workflow
 txt/

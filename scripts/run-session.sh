@@ -13,12 +13,31 @@ export TERM="${TERM:-xterm-256color}"
 export LANG="${LANG:-C.UTF-8}"
 DB_DIR="${DCRAWL_DB_DIR:-/data/dcrawl}"
 
-# Source MUMPS runtime environment pointing at the shared database
+# Locate and source MUMPS runtime environment pointing at the shared database
+YDB_ENV_SET="/usr/local/etc/ydb_env_set"
+if [[ ! -f "$YDB_ENV_SET" ]]; then
+  YDB_ENV_SET="$(find /opt/yottadb /usr/local/lib/yottadb -name ydb_env_set 2>/dev/null | head -n 1 || true)"
+fi
+if [[ -z "$YDB_ENV_SET" || ! -f "$YDB_ENV_SET" ]]; then
+  echo "Error: could not locate ydb_env_set" >&2
+  exit 1
+fi
+
 set +eu
 for v in $(compgen -v ydb_) $(compgen -v gtm); do unset "$v"; done
 export ydb_dir="$DB_DIR"
-source /usr/local/etc/ydb_env_set >/dev/null
+YDB_ENV_LOG="$(mktemp)"
+source "$YDB_ENV_SET" >"$YDB_ENV_LOG" 2>&1
+YDB_RC=$?
 set -eu
+if [[ "$YDB_RC" -ne 0 ]] || ! command -v mumps >/dev/null 2>&1; then
+  echo "Error: failed to initialize YottaDB environment (rc=${YDB_RC}, arch=$(uname -m))." >&2
+  cat "$YDB_ENV_LOG" >&2 || true
+  rm -f "$YDB_ENV_LOG"
+  exit 1
+fi
+rm -f "$YDB_ENV_LOG"
+
 export ydb_routines="/app/src ${ydb_routines:-}"
 export gtmroutines="/app/src ${gtmroutines:-}"
 

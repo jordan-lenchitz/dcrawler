@@ -6,16 +6,44 @@ umask 077
 export DCRAWL_DB_DIR="${DCRAWL_DB_DIR:-/data/dcrawl}"
 mkdir -p "$DCRAWL_DB_DIR"
 
-# Initialize the shared MUMPS database once at container startup and seed ^TYPE
+# Locate and initialize the shared MUMPS runtime environment
+YDB_ENV_SET="/usr/local/etc/ydb_env_set"
+if [[ ! -f "$YDB_ENV_SET" ]]; then
+  YDB_ENV_SET="$(find /opt/yottadb /usr/local/lib/yottadb -name ydb_env_set 2>/dev/null | head -n 1 || true)"
+fi
+if [[ -z "$YDB_ENV_SET" || ! -f "$YDB_ENV_SET" ]]; then
+  echo "Error: could not locate ydb_env_set" >&2
+  exit 1
+fi
+
 set +eu
 for v in $(compgen -v ydb_) $(compgen -v gtm); do unset "$v"; done
 export ydb_dir="$DCRAWL_DB_DIR"
-source /usr/local/etc/ydb_env_set >/dev/null
+YDB_ENV_LOG="$(mktemp)"
+source "$YDB_ENV_SET" >"$YDB_ENV_LOG" 2>&1
+YDB_RC=$?
 set -eu
+if [[ "$YDB_RC" -ne 0 ]] || ! command -v mumps >/dev/null 2>&1; then
+  echo "Error: failed to initialize YottaDB environment (rc=${YDB_RC}, arch=$(uname -m))." >&2
+  echo "If running on Apple Silicon / ARM64, ensure you are using a native linux/arm64 image." >&2
+  cat "$YDB_ENV_LOG" >&2 || true
+  rm -f "$YDB_ENV_LOG"
+  exit 1
+fi
+rm -f "$YDB_ENV_LOG"
+
 export ydb_routines="/app/src ${ydb_routines:-}"
 export gtmroutines="/app/src ${gtmroutines:-}"
 export ydb_etrap="ZHALT 1"
 export gtm_etrap="ZHALT 1"
+
+# Recover/rundown existing database files for this architecture after unclean stop or hostname change
+for dat in "$DCRAWL_DB_DIR"/${ydb_rel:-*}/g/*.dat; do
+  if [[ -f "$dat" ]]; then
+    mupip rundown -file "$dat" >/dev/null 2>&1 || true
+  fi
+done
+mupip rundown -region "*" >/dev/null 2>&1 || true
 
 cd /app
 mumps -run 'SEED^DCTYPE'
